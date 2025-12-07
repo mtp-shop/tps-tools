@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | VISION ENHANCE</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700;800&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg: #050505;
+            --panel: #0a0a0a;
+            --border: #222;
+            --accent: #8b5cf6; /* Krea-like Purple */
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --text-main: #fff;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; user-select: none; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh; width: 100vw; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* HEADER */
+        .nav-bar {
+            height: 60px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.95);
+            z-index: 100;
+        }
+        .logo { font-family: 'Rajdhani'; font-weight: 800; font-size: 1.4rem; letter-spacing: 2px; }
+        .logo span { color: var(--accent); }
+        .back-btn {
+            text-decoration: none; color: #888; font-size: 0.8rem; font-weight: 700; 
+            border: 1px solid #333; padding: 8px 20px; transition: 0.2s; font-family: 'Rajdhani';
+        }
+        .back-btn:hover { border-color: var(--accent); color: white; }
+
+        /* LAYOUT */
+        .workspace { display: flex; height: calc(100vh - 60px); }
+
+        /* LEFT CONTROLS */
+        .sidebar {
+            width: 320px; background: #080808; border-right: 1px solid var(--border);
+            padding: 30px; display: flex; flex-direction: column; gap: 25px;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 10px; }
+        .label { 
+            font-family: 'Rajdhani'; font-weight: 700; color: #666; font-size: 0.8rem; 
+            text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between;
+        }
+        
+        /* UPLOAD BOX */
+        .upload-box {
+            border: 1px dashed #333; border-radius: 8px; height: 120px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; background: #0c0c0c; color: #555;
+        }
+        .upload-box:hover { border-color: var(--accent); color: var(--accent); background: rgba(139, 92, 246, 0.05); }
+        .upload-box i { font-size: 2rem; margin-bottom: 10px; }
+        
+        /* SLIDERS & BUTTONS */
+        input[type="range"] {
+            width: 100%; height: 4px; background: #222; border-radius: 2px; appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 16px; height: 16px; background: var(--accent); 
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px var(--accent);
+        }
+
+        .factor-btns { display: flex; gap: 10px; }
+        .f-btn {
+            flex: 1; background: #111; border: 1px solid #333; color: #666; padding: 10px;
+            cursor: pointer; border-radius: 4px; font-weight: 700; transition: 0.2s;
+        }
+        .f-btn.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        .btn-process {
+            background: white; color: black; border: none; padding: 15px; border-radius: 4px;
+            font-family: 'Rajdhani'; font-weight: 800; font-size: 1.1rem; cursor: pointer;
+            margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: 0.2s;
+        }
+        .btn-process:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .btn-process:disabled { background: #333; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* VIEWPORT (CANVAS) */
+        .viewport {
+            flex: 1; background: #050505; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            background-image: radial-gradient(#151515 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* COMPARE CONTAINER */
+        .compare-container {
+            position: relative; max-width: 90%; max-height: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid #222;
+            display: none; /* Hidden until loaded */
+            cursor: ew-resize; user-select: none;
+        }
+
+        .img-layer {
+            display: block; max-width: 100%; max-height: 80vh; object-fit: contain;
+            pointer-events: none;
+        }
+        
+        /* The "After" Image (On Top) */
+        .img-after-wrapper {
+            position: absolute; top: 0; left: 0; height: 100%; width: 50%; /* JS changes this */
+            overflow: hidden; border-right: 2px solid white;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.5);
+            background: #050505;
+        }
+        .img-after {
+            height: 100%; width: auto; max-width: none; /* Allow it to overflow wrapper */
+        }
+
+        /* Slider Handle */
+        .slider-handle {
+            position: absolute; top: 50%; right: -17px; width: 34px; height: 34px;
+            background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: black; font-size: 0.8rem; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 10; transform: translateY(-50%);
+        }
+
+        /* LABELS */
+        .badge {
+            position: absolute; bottom: 20px; padding: 5px 12px; background: rgba(0,0,0,0.8);
+            border-radius: 20px; font-size: 0.7rem; font-weight: 700; color: white;
+            border: 1px solid #333; pointer-events: none;
+        }
+        .badge-before { left: 20px; }
+        .badge-after { right: 20px; background: var(--accent); border-color: var(--accent); }
+
+        /* LOADING STATE */
+        .loader-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 50;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .loader-bar { width: 300px; height: 4px; background: #222; margin-top: 20px; overflow: hidden; border-radius: 2px; }
+        .loader-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.1s; }
+        .loader-txt { font-family: 'Rajdhani'; color: var(--accent); margin-top: 10px; font-size: 0.9rem; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.5; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <div class="logo">VISION <span>ENHANCE</span></div>
+        <a href="index.html" class="back-btn">RETURN TO SYSTEM</a>
+    </div>
+
+    <div class="workspace">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="control-group">
+                <div class="label">Input Image</div>
+                <input type="file" id="inp-file" style="display:none" accept="image/*">
+                <div class="upload-box" onclick="document.getElementById('inp-file').click()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span id="file-name" style="font-size:0.8rem; text-align:center; padding:0 10px;">Click to Upload</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="label">Upscale Factor</div>
+                <div class="factor-btns">
+                    <div class="f-btn active" onclick="setFactor(2, this)">2x</div>
+                    <div class="f-btn" onclick="setFactor(4, this)">4x</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="label"><span>AI Clarity Strength</span> <span id="val-str">50%</span></div>
+                <input type="range" id="rng-str" min="0" max="100" value="50" oninput="updateLabels()">
+            </div>
+
+            <div class="control-group">
+                <div class="label"><span>Texture Noise Reduction</span> <span id="val-denoise">30%</span></div>
+                <input type="range" id="rng-denoise" min="0" max="100" value="30" oninput="updateLabels()">
+            </div>
+
+            <!-- Download Btn -->
+            <button class="btn-process" id="btn-dl" onclick="downloadResult()" disabled>
+                <i class="fa-solid fa-download"></i> DOWNLOAD
+            </button>
+            
+            <!-- Process Btn -->
+            <button class="btn-process" id="btn-run" onclick="runUpscale()" style="background:var(--accent); color:white; margin-top:10px;" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> ENHANCE
+            </button>
+        </div>
+
+        <!-- MAIN VIEW -->
+        <div class="viewport" id="viewport">
+            
+            <!-- Compare Container -->
+            <div class="compare-container" id="compare-box">
+                <!-- Bottom Layer (Original / Blurry) -->
+                <img src="" class="img-layer" id="img-before">
+                <div class="badge badge-before">ORIGINAL</div>
+
+                <!-- Top Layer (Enhanced) - Clipped -->
+                <div class="img-after-wrapper" id="clipper">
+                    <img src="" class="img-after" id="img-after">
+                    <div class="slider-handle"><i class="fa-solid fa-arrows-left-right"></i></div>
+                </div>
+                <div class="badge badge-after">ENHANCED</div>
+            </div>
+
+            <!-- Loader -->
+            <div class="loader-overlay" id="loader">
+                <div style="font-family:'Rajdhani'; font-weight:700; font-size:1.5rem;">UPSCALING...</div>
+                <div class="loader-bar"><div class="loader-fill" id="load-fill"></div></div>
+                <div class="loader-txt" id="load-txt">INITIALIZING NEURAL NET...</div>
+            </div>
+
+            <!-- Hidden Canvas for Processing -->
+            <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES ---
+        let srcImage = new Image();
+        let scaleFactor = 2;
+        let isProcessing = false;
+        
+        // --- UI LOGIC ---
+        function updateLabels() {
+            document.getElementById('val-str').innerText = document.getElementById('rng-str').value + "%";
+            document.getElementById('val-denoise').innerText = document.getElementById('rng-denoise').value + "%";
+        }
+
+        function setFactor(n, btn) {
+            scaleFactor = n;
+            document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // --- FILE UPLOAD ---
+        document.getElementById('inp-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            document.getElementById('file-name').innerText = file.name.substring(0, 20);
+            
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                srcImage = new Image();
+                srcImage.onload = () => {
+                    // Reset View
+                    document.getElementById('compare-box').style.display = 'block';
+                    
+                    const beforeImg = document.getElementById('img-before');
+                    const afterImg = document.getElementById('img-after');
+                    
+                    beforeImg.src = ev.target.result;
+                    // Initially set 'after' to same as 'before' until processed
+                    afterImg.src = ev.target.result;
+                    
+                    // Set sizing to match
+                    syncSizes();
+                    
+                    document.getElementById('btn-run').disabled = false;
+                    document.getElementById('btn-dl').disabled = true;
+                };
+                srcImage.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function syncSizes() {
+            // Ensure the internal image in the clipper matches the size of the container image
+            const before = document.getElementById('img-before');
+            const after = document.getElementById('img-after');
+            
+            // Wait for render layout
+            setTimeout(() => {
+                after.style.width = before.getBoundingClientRect().width + "px";
+                after.style.height = before.getBoundingClientRect().height + "px";
+            }, 100);
+        }
+
+        window.addEventListener('resize', syncSizes);
+
+        // --- SLIDER DRAG LOGIC ---
+        const container = document.getElementById('compare-box');
+        const clipper = document.getElementById('clipper');
+
+        container.addEventListener('mousemove', (e) => {
+            if(!srcImage.src) return;
+            const rect = container.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            // Clamp
+            if(x < 0) x = 0;
+            if(x > rect.width) x = rect.width;
+            
+            const pct = (x / rect.width) * 100;
+            clipper.style.width = pct + "%";
+        });
+
+        // Mobile Touch Support
+        container.addEventListener('touchmove', (e) => {
+            if(!srcImage.src) return;
+            const rect = container.getBoundingClientRect();
+            let x = e.touches[0].clientX - rect.left;
+            if(x < 0) x = 0; if(x > rect.width) x = rect.width;
+            const pct = (x / rect.width) * 100;
+            clipper.style.width = pct + "%";
+        });
+
+        // --- UPSCALE ENGINE (Simulated AI) ---
+        function runUpscale() {
+            if(isProcessing) return;
+            isProcessing = true;
+            
+            const loader = document.getElementById('loader');
+            const fill = document.getElementById('load-fill');
+            const txt = document.getElementById('load-txt');
+            
+            loader.style.display = 'flex';
+            fill.style.width = '0%';
+
+            // Simulated Steps
+            const steps = [
+                { p: 20, t: "ANALYZING PIXELS..." },
+                { p: 50, t: "HALLUCINATING DETAILS..." },
+                { p: 80, t: "SHARPENING EDGES..." },
+                { p: 100, t: "FINALIZING..." }
+            ];
+
+            let step = 0;
+            const timer = setInterval(() => {
+                fill.style.width = steps[step].p + "%";
+                txt.innerText = steps[step].t;
+                step++;
+                
+                if(step >= steps.length) {
+                    clearInterval(timer);
+                    processCanvas(); // Actual math happens here
+                }
+            }, 600); // Fake delay for "AI Feel"
+        }
+
+        function processCanvas() {
+            const canvas = document.getElementById('hidden-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const w = srcImage.width * scaleFactor;
+            const h = srcImage.height * scaleFactor;
+            
+            canvas.width = w;
+            canvas.height = h;
+
+            // 1. High Quality Bicubic Scaling (Browser Native)
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(srcImage, 0, 0, w, h);
+
+            // 2. Convolution Sharpening (The "Enhance" Trick)
+            const strength = parseInt(document.getElementById('rng-str').value) / 100;
+            if(strength > 0) {
+                const imgData = ctx.getImageData(0, 0, w, h);
+                const data = imgData.data;
+                const w4 = w * 4;
+                
+                // Simple Sharpen Kernel application (simplified for performance)
+                // We create a copy buffer to read from while writing to original
+                const buff = new Uint8ClampedArray(data);
+                
+                // Mix factor
+                const mix = strength * 0.8; 
+
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = (y * w + x) * 4;
+                        
+                        // Neighbors
+                        const up = i - w4;
+                        const down = i + w4;
+                        const left = i - 4;
+                        const right = i + 4;
+
+                        // Apply kernel [0, -1, 0, -1, 5, -1, 0, -1, 0]
+                        for (let c = 0; c < 3; c++) {
+                            const val = (5 * buff[i+c]) - buff[up+c] - buff[down+c] - buff[left+c] - buff[right+c];
+                            // Blend original with sharpened result based on strength
+                            data[i+c] = (buff[i+c] * (1-mix)) + (val * mix);
+                        }
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+
+            // Finish
+            const resURL = canvas.toDataURL('image/png', 1.0);
+            document.getElementById('img-after').src = resURL;
+            
+            // Sync again because layout might shift
+            syncSizes();
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('btn-dl').disabled = false;
+            isProcessing = false;
+        }
+
+        function downloadResult() {
+            const canvas = document.getElementById('hidden-canvas');
+            const link = document.createElement('a');
+            link.download = `enhanced_${scaleFactor}x.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+    </script>
+</body>
+</html>

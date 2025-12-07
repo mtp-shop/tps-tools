@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | SIGNAL UPLINK</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&family=gg+sans:wght@400;600;700&display=swap');
+
+        :root {
+            --bg: #050505;
+            --panel: #0a0a0a;
+            --border: #222;
+            --accent: #5865F2; /* Discord Blurple */
+            --accent-glow: rgba(88, 101, 242, 0.2);
+            --tps-red: #ff003c;
+            --text-main: #fff;
+            
+            /* Discord UI Colors */
+            --discord-bg: #36393f;
+            --discord-embed: #2f3136;
+            --discord-text: #dcddde;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            height: 100vh; width: 100vw; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: 900; pointer-events: none; opacity: 0.4;
+        }
+
+        /* HEADER */
+        .nav-bar {
+            height: 60px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.95);
+            z-index: 100;
+        }
+        .logo { font-weight: 800; font-size: 1.4rem; letter-spacing: 2px; }
+        .logo span { color: var(--accent); }
+        .back-btn {
+            text-decoration: none; color: #888; font-size: 0.8rem; font-weight: 700; 
+            border: 1px solid #333; padding: 8px 20px; transition: 0.2s;
+        }
+        .back-btn:hover { border-color: var(--tps-red); color: white; }
+
+        /* MAIN LAYOUT */
+        .workspace {
+            display: flex; flex: 1; height: calc(100vh - 60px);
+        }
+
+        /* LEFT PANEL (EDITOR) */
+        .editor-panel {
+            width: 500px; background: #080808; border-right: 1px solid var(--border);
+            padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .label { 
+            font-family: 'Share Tech Mono'; color: var(--accent); font-size: 0.7rem; 
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .inp {
+            background: #111; border: 1px solid #333; padding: 12px; color: white;
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; border-radius: 4px;
+            transition: 0.2s;
+        }
+        .inp:focus { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+        textarea.inp { resize: vertical; min-height: 80px; }
+
+        .row { display: flex; gap: 15px; }
+        .col { flex: 1; }
+
+        /* Color Picker Override */
+        input[type="color"] { height: 45px; padding: 2px; cursor: pointer; }
+
+        .btn-send {
+            margin-top: 20px; padding: 15px; background: var(--accent); color: white;
+            border: none; font-family: 'Rajdhani'; font-weight: 800; font-size: 1.1rem;
+            letter-spacing: 2px; cursor: pointer; transition: 0.2s; text-transform: uppercase;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-send:hover { background: #4752c4; box-shadow: 0 0 20px var(--accent-glow); }
+        .btn-send:disabled { background: #333; cursor: not-allowed; }
+
+        /* RIGHT PANEL (PREVIEW) */
+        .preview-panel {
+            flex: 1; background: #202225; display: flex; 
+            align-items: center; justify-content: center; position: relative;
+            background-image: radial-gradient(#2f3136 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* DISCORD MOCKUP */
+        .discord-msg {
+            width: 100%; max-width: 700px; display: flex; gap: 15px;
+            padding: 20px; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .d-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--accent);
+            flex-shrink: 0; overflow: hidden;
+        }
+        .d-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .d-content { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        
+        .d-header { display: flex; align-items: baseline; gap: 8px; }
+        .d-username { color: white; font-weight: 600; font-size: 1rem; }
+        .d-bot-tag { 
+            background: #5865F2; color: white; font-size: 0.65rem; padding: 1px 4px; 
+            border-radius: 3px; text-transform: uppercase; font-weight: 600; display: flex; align-items: center; 
+        }
+        .d-bot-tag i { margin-right: 2px; }
+        .d-timestamp { color: #72767d; font-size: 0.75rem; }
+
+        .d-body { color: var(--discord-text); font-size: 0.95rem; white-space: pre-wrap; line-height: 1.4; }
+
+        /* EMBED */
+        .d-embed {
+            background: var(--discord-embed); border-left: 4px solid var(--accent);
+            border-radius: 4px; padding: 15px; max-width: 500px; margin-top: 5px;
+            display: grid; grid-template-columns: 1fr auto; gap: 10px;
+        }
+        .embed-inner { display: flex; flex-direction: column; gap: 8px; }
+        
+        .e-author { font-size: 0.85rem; font-weight: 600; color: white; display: flex; align-items: center; gap: 8px; }
+        .e-author img { width: 24px; height: 24px; border-radius: 50%; }
+        
+        .e-title { color: white; font-weight: 600; font-size: 1rem; }
+        .e-desc { color: var(--discord-text); font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; }
+        
+        .e-thumb { width: 80px; height: 80px; border-radius: 4px; object-fit: cover; display: none; }
+        .e-image { width: 100%; border-radius: 4px; margin-top: 10px; display: none; max-width: 400px; }
+        .e-footer { font-size: 0.75rem; color: #72767d; margin-top: 5px; display: flex; align-items: center; gap: 5px; }
+        .e-footer img { width: 20px; height: 20px; border-radius: 50%; }
+
+        .status-log { 
+            position: absolute; bottom: 20px; right: 20px; font-family: 'Share Tech Mono'; 
+            color: #00ff9d; font-size: 0.8rem; opacity: 0; transition: 0.3s; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <div class="nav-bar">
+        <div class="logo">SIGNAL <span>UPLINK</span></div>
+        <a href="index.html" class="back-btn">RETURN TO SYSTEM</a>
+    </div>
+
+    <div class="workspace">
+        <!-- EDITOR -->
+        <div class="editor-panel">
+            
+            <div style="padding:15px; border:1px dashed #333; margin-bottom:10px;">
+                <div class="input-group">
+                    <div class="label">Target Webhook URL</div>
+                    <input type="text" id="in-url" class="inp" placeholder="https://discord.com/api/webhooks/...">
+                </div>
+            </div>
+
+            <div class="label">Identity</div>
+            <div class="row">
+                <div class="col input-group">
+                    <input type="text" id="in-user" class="inp" placeholder="Bot Name" value="TPS System">
+                </div>
+                <div class="col input-group">
+                    <input type="text" id="in-avatar" class="inp" placeholder="Avatar URL">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <div class="label">Message Content</div>
+                <textarea id="in-msg" class="inp" placeholder="Main message body..."></textarea>
+            </div>
+
+            <div style="border-top:1px solid #222; margin: 10px 0;"></div>
+            
+            <div class="label" style="color:white; font-size:0.9rem;">Embed Configuration</div>
+
+            <div class="row">
+                <div class="col input-group">
+                    <div class="label">Color</div>
+                    <input type="color" id="in-color" class="inp" value="#5865F2" style="width:100%">
+                </div>
+                <div class="col input-group">
+                    <div class="label">Author Name</div>
+                    <input type="text" id="in-author" class="inp" placeholder="Embed Author">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <div class="label">Title</div>
+                <input type="text" id="in-title" class="inp" placeholder="Embed Title">
+            </div>
+
+            <div class="input-group">
+                <div class="label">Description</div>
+                <textarea id="in-desc" class="inp" placeholder="Embed Description..."></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col input-group">
+                    <div class="label">Thumbnail URL</div>
+                    <input type="text" id="in-thumb" class="inp" placeholder="Small Image (Right)">
+                </div>
+                <div class="col input-group">
+                    <div class="label">Main Image URL</div>
+                    <input type="text" id="in-img" class="inp" placeholder="Big Image (Bottom)">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col input-group">
+                    <div class="label">Footer Text</div>
+                    <input type="text" id="in-footer" class="inp" placeholder="Footer text">
+                </div>
+                <div class="col input-group">
+                    <div class="label">Timestamp</div>
+                    <div style="display:flex; align-items:center; height:45px; gap:10px;">
+                        <input type="checkbox" id="in-time" checked> <span style="color:#888; font-size:0.8rem">Show Time</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-send" onclick="sendWebhook()" id="btn-send">
+                <i class="fa-solid fa-paper-plane"></i> SEND PAYLOAD
+            </button>
+        </div>
+
+        <!-- PREVIEW -->
+        <div class="preview-panel">
+            <div class="discord-msg">
+                <div class="d-avatar">
+                    <img id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+                </div>
+                <div class="d-content">
+                    <div class="d-header">
+                        <span class="d-username" id="p-user">TPS System</span>
+                        <div class="d-bot-tag"><i class="fa-solid fa-check"></i> BOT</div>
+                        <span class="d-timestamp">Today at 12:00 PM</span>
+                    </div>
+                    <div class="d-body" id="p-msg"></div>
+                    
+                    <!-- EMBED -->
+                    <div class="d-embed" id="p-embed" style="display:none;">
+                        <div class="embed-inner">
+                            <div class="e-author" id="p-author-row" style="display:none;">
+                                <span id="p-author"></span>
+                            </div>
+                            <div class="e-title" id="p-title" style="display:none;"></div>
+                            <div class="e-desc" id="p-desc" style="display:none;"></div>
+                            <img class="e-image" id="p-image">
+                            <div class="e-footer" id="p-footer-row" style="display:none;">
+                                <span id="p-footer"></span>
+                                <span id="p-time-sep" style="display:none">•</span>
+                                <span id="p-time">Today at 12:00 PM</span>
+                            </div>
+                        </div>
+                        <img class="e-thumb" id="p-thumb">
+                    </div>
+                </div>
+            </div>
+            <div class="status-log" id="status-log">PAYLOAD DELIVERED [200 OK]</div>
+        </div>
+    </div>
+
+    <script>
+        // --- LIVE PREVIEW LOGIC ---
+        const inputs = ['user', 'avatar', 'msg', 'color', 'author', 'title', 'desc', 'thumb', 'img', 'footer', 'time'];
+        
+        inputs.forEach(id => {
+            const el = document.getElementById('in-' + id);
+            if(el) el.addEventListener('input', updatePreview);
+        });
+
+        function updatePreview() {
+            // Identity
+            setText('p-user', 'in-user', 'TPS System');
+            setImg('p-avatar', 'in-avatar', 'https://cdn.discordapp.com/embed/avatars/0.png');
+            setText('p-msg', 'in-msg', '');
+
+            // Embed Color
+            document.getElementById('p-embed').style.borderLeftColor = document.getElementById('in-color').value;
+
+            // Visibility Check
+            const hasEmbed = ['title', 'desc', 'author', 'thumb', 'img', 'footer'].some(id => document.getElementById('in-'+id).value !== '');
+            document.getElementById('p-embed').style.display = hasEmbed ? 'grid' : 'none';
+
+            // Embed Content
+            toggleDisplay('p-author-row', 'in-author');
+            setText('p-author', 'in-author');
+            
+            toggleDisplay('p-title', 'in-title');
+            setText('p-title', 'in-title');
+            
+            toggleDisplay('p-desc', 'in-desc');
+            setText('p-desc', 'in-desc');
+
+            // Images
+            const thumbUrl = document.getElementById('in-thumb').value;
+            const imgUrl = document.getElementById('in-img').value;
+            
+            const thumbEl = document.getElementById('p-thumb');
+            if(thumbUrl) { thumbEl.src = thumbUrl; thumbEl.style.display = 'block'; } else { thumbEl.style.display = 'none'; }
+
+            const imgEl = document.getElementById('p-image');
+            if(imgUrl) { imgEl.src = imgUrl; imgEl.style.display = 'block'; } else { imgEl.style.display = 'none'; }
+
+            // Footer
+            const hasFooter = document.getElementById('in-footer').value !== '';
+            const hasTime = document.getElementById('in-time').checked;
+            
+            if(hasFooter || hasTime) {
+                document.getElementById('p-footer-row').style.display = 'flex';
+                setText('p-footer', 'in-footer');
+                document.getElementById('p-time').style.display = hasTime ? 'block' : 'none';
+                document.getElementById('p-time-sep').style.display = (hasFooter && hasTime) ? 'block' : 'none';
+            } else {
+                document.getElementById('p-footer-row').style.display = 'none';
+            }
+        }
+
+        function setText(targetId, sourceId, fallback = '') {
+            const val = document.getElementById(sourceId).value;
+            document.getElementById(targetId).innerText = val || fallback;
+        }
+
+        function setImg(targetId, sourceId, fallback) {
+            const val = document.getElementById(sourceId).value;
+            document.getElementById(targetId).src = val || fallback;
+        }
+
+        function toggleDisplay(targetId, sourceId) {
+            const val = document.getElementById(sourceId).value;
+            document.getElementById(targetId).style.display = val ? 'block' : 'none';
+        }
+
+        // --- SEND LOGIC ---
+        async function sendWebhook() {
+            const url = document.getElementById('in-url').value;
+            const btn = document.getElementById('btn-send');
+            const status = document.getElementById('status-log');
+
+            if(!url.startsWith('http')) {
+                alert("Please enter a valid Webhook URL.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> TRANSMITTING...';
+
+            // Construct Payload
+            const payload = {
+                username: document.getElementById('in-user').value || 'TPS System',
+                avatar_url: document.getElementById('in-avatar').value,
+                content: document.getElementById('in-msg').value,
+                embeds: []
+            };
+
+            // Add Embed if exists
+            const hasEmbed = ['title', 'desc', 'author', 'thumb', 'img', 'footer'].some(id => document.getElementById('in-'+id).value !== '');
+            
+            if(hasEmbed) {
+                const hexColor = document.getElementById('in-color').value.replace('#', '');
+                const decimalColor = parseInt(hexColor, 16);
+
+                const embedObj = {
+                    color: decimalColor,
+                    title: document.getElementById('in-title').value,
+                    description: document.getElementById('in-desc').value,
+                };
+
+                if(document.getElementById('in-author').value) embedObj.author = { name: document.getElementById('in-author').value };
+                if(document.getElementById('in-footer').value) embedObj.footer = { text: document.getElementById('in-footer').value };
+                if(document.getElementById('in-thumb').value) embedObj.thumbnail = { url: document.getElementById('in-thumb').value };
+                if(document.getElementById('in-img').value) embedObj.image = { url: document.getElementById('in-img').value };
+                if(document.getElementById('in-time').checked) embedObj.timestamp = new Date().toISOString();
+
+                payload.embeds.push(embedObj);
+            }
+
+            try {
+                const req = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if(req.ok) {
+                    status.innerText = "PAYLOAD DELIVERED [200 OK]";
+                    status.style.color = "#00ff9d";
+                    status.style.opacity = 1;
+                    setTimeout(() => status.style.opacity = 0, 3000);
+                } else {
+                    throw new Error("Failed");
+                }
+            } catch (e) {
+                status.innerText = "CONNECTION FAILED [ERR]";
+                status.style.color = "#ff003c";
+                status.style.opacity = 1;
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> SEND PAYLOAD';
+        }
+
+        // Init
+        updatePreview();
+    </script>
+</body>
+</html>
