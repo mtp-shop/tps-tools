@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | DATA CRUSHER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- GIF Encoder Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg: #020202;
+            --panel: #080808;
+            --border: #1a1a1a;
+            --accent: #ff9d00;
+            --text-main: #e0e0e0;
+            --text-muted: #555;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: -1; pointer-events: none;
+        }
+
+        .exit-btn {
+            position: absolute; top: 30px; right: 30px; z-index: 500;
+            background: black; padding: 10px 20px; border: 1px solid #333;
+            color: #666; font-family: 'Rajdhani'; font-weight: 700; cursor: pointer;
+            border-radius: 4px; transition: 0.2s; font-size: 0.8rem; text-decoration: none;
+        }
+        .exit-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        .toolbar {
+            position: absolute; top: 30px; left: 30px; width: 360px;
+            background: rgba(8, 8, 8, 0.95); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); padding: 30px;
+            border-radius: 4px; z-index: 500;
+            display: flex; flex-direction: column; gap: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            max-height: 90vh; overflow-y: auto;
+        }
+        
+        .tool-header {
+            font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 1px; font-size: 1.2rem;
+            border-bottom: 1px solid #222; padding-bottom: 15px; margin-bottom: 5px;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .status-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
+
+        .control-label {
+            font-size: 0.7rem; color: #666; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; margin-top: 10px;
+        }
+
+        input[type="file"] { display: none; }
+        .file-upload {
+            border: 1px dashed #333; padding: 25px; text-align: center; border-radius: 4px;
+            cursor: pointer; transition: 0.2s; color: #555; font-size: 0.8rem; font-weight: 600;
+            display: flex; flex-direction: column; gap: 10px; align-items: center;
+            background: #0c0c0c;
+        }
+        .file-upload i { font-size: 1.5rem; }
+        .file-upload:hover { border-color: var(--accent); color: var(--accent); }
+        .file-info { font-size: 0.7rem; color: #444; }
+
+        input[type="number"] {
+            background: #111; border: 1px solid #333; color: var(--accent); padding: 10px;
+            width: 100%; font-family: 'Rajdhani'; font-weight: 700; font-size: 1rem;
+        }
+
+        select {
+            width: 100%; background: #0c0c0c; border: 1px solid #333; color: white;
+            padding: 15px; font-family: 'Inter'; border-radius: 4px; outline: none; margin-top: 5px;
+        }
+        select:focus { border-color: var(--accent); }
+
+        .btn-action {
+            background: var(--text-main); color: black; border: none; padding: 15px;
+            font-family: 'Rajdhani'; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: 0.2s; width: 100%; margin-top: 20px;
+        }
+        .btn-action:hover { background: var(--accent); }
+        .btn-action:disabled { background: #222; color: #444; cursor: not-allowed; }
+
+        .results-panel {
+            background: #111; border: 1px solid #222; padding: 15px; margin-top: 20px; display: none;
+        }
+        .stat-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+        .stat-val { color: white; font-family: 'Rajdhani'; font-weight: 700; }
+        .stat-val.highlight { color: var(--accent); }
+
+        .center-stage {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-image: repeating-linear-gradient(45deg, #050505 0, #050505 10px, #080808 10px, #080808 20px);
+            z-index: 1; padding: 80px 80px 80px 400px; flex-direction: column;
+        }
+        
+        .preview-container {
+            max-width: 80%; max-height: 60vh; border: 1px solid #333;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); position: relative;
+            background: black; display: flex; justify-content: center; align-items: center;
+        }
+        video, audio, img { max-width: 100%; max-height: 100%; display: block; }
+        
+        .progress-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #222;
+        }
+        .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s; }
+        
+        .processing-badge {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); border: 1px solid var(--accent); color: var(--accent);
+            padding: 10px 30px; font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 2px;
+            display: none; z-index: 10;
+        }
+
+        .checkbox-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        .checkbox-row input { width: auto; height: auto; }
+        .checkbox-row label { font-size: 0.7rem; color: #888; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <a href="index.html" class="exit-btn">RETURN TO SYSTEM</a>
+
+    <!-- LEFT PANEL -->
+    <div class="toolbar">
+        <div class="tool-header">DATA CRUSHER <div class="status-dot"></div></div>
+        
+        <!-- STEP 1: UPLOAD -->
+        <div>
+            <div class="control-label">01 // Source Media</div>
+            <input type="file" id="inp-file" accept="video/mp4, video/webm, audio/mp3, audio/wav, image/gif">
+            <label class="file-upload" for="inp-file" id="lbl-file">
+                <i class="fa-solid fa-file-arrow-up"></i>
+                <span>Drop MP4, MP3, or GIF</span>
+            </label>
+            <div class="file-info" id="file-meta">No file loaded</div>
+        </div>
+
+        <!-- STEP 2: SETTINGS -->
+        <div id="settings-group" style="opacity: 0.5; pointer-events: none; transition: 0.3s;">
+            <div class="control-label">02 // Target Size (MB)</div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="number" id="inp-target" value="10" min="0.1" step="0.1">
+                <span style="font-family:'Rajdhani'; font-weight:700; color:#444;">MB</span>
+            </div>
+            <div class="file-info" id="est-bitrate" style="margin-top:5px;">Est. Bitrate: 0 kbps</div>
+
+            <div id="video-options">
+                <div class="control-label">Resolution</div>
+                <select id="sel-res">
+                    <option value="1">Original Resolution</option>
+                    <option value="0.75">720p (HD)</option>
+                    <option value="0.5">480p (SD)</option>
+                    <option value="0.25">Mobile (Low)</option>
+                </select>
+            </div>
+
+            <!-- GIF Specific Options -->
+            <div id="gif-options" style="display:none; border-top:1px solid #222; margin-top:10px; padding-top:10px;">
+                <div class="control-label">GIF Settings</div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="chk-gif-out">
+                    <label for="chk-gif-out">Export as .GIF (Slower/Larger)</label>
+                </div>
+                <div class="file-info" style="margin-top:5px;">Default: Converts GIF to WebM (Smaller)</div>
+            </div>
+        </div>
+
+        <button class="btn-action" id="btn-start" onclick="startCompression()" disabled>INITIALIZE CRUSH</button>
+
+        <!-- RESULTS -->
+        <div class="results-panel" id="results">
+            <div class="stat-row"><span>Original</span> <span class="stat-val" id="res-orig">0 MB</span></div>
+            <div class="stat-row"><span>Result</span> <span class="stat-val highlight" id="res-new">0 MB</span></div>
+            <div class="stat-row"><span>Reduction</span> <span class="stat-val" id="res-percent">0%</span></div>
+            <button class="btn-action" style="margin-top:10px; padding:10px; font-size:0.8rem;" onclick="downloadFile()">SAVE FILE</button>
+        </div>
+    </div>
+
+    <!-- MAIN VIEW -->
+    <div class="center-stage">
+        <div class="preview-container">
+            <div class="processing-badge" id="badge-process">PROCESSING... <span id="pct-process">0%</span></div>
+            
+            <video id="vid-preview" playsinline></video>
+            <audio id="aud-preview" controls style="display:none; width: 300px;"></audio>
+            <img id="img-preview" style="display:none;">
+
+            <!-- Hidden Canvas -->
+            <canvas id="hidden-canvas" style="display:none;"></canvas>
+            
+            <div class="progress-overlay"><div class="progress-fill" id="prog-fill"></div></div>
+        </div>
+        <div style="margin-top: 15px; font-family: 'Rajdhani'; color: #444; text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem;">
+            Local Processing Cluster
+        </div>
+    </div>
+
+    <script>
+        // --- WORKER BLOB FOR GIF.JS (Embedded to keep single file) ---
+        const gifWorkerBlob = new Blob([`
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+        `], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(gifWorkerBlob);
+        // -------------------------------------------------------------
+
+        // DOM ELEMENTS
+        const inpFile = document.getElementById('inp-file');
+        const lblFile = document.getElementById('lbl-file');
+        const fileMeta = document.getElementById('file-meta');
+        const vidPreview = document.getElementById('vid-preview');
+        const audPreview = document.getElementById('aud-preview');
+        const imgPreview = document.getElementById('img-preview');
+        const hiddenCanvas = document.getElementById('hidden-canvas');
+        const ctx = hiddenCanvas.getContext('2d');
+        const btnStart = document.getElementById('btn-start');
+        const settingsGroup = document.getElementById('settings-group');
+        const inpTarget = document.getElementById('inp-target');
+        const estBitrateLbl = document.getElementById('est-bitrate');
+        const progFill = document.getElementById('prog-fill');
+        const badge = document.getElementById('badge-process');
+        const resultsPanel = document.getElementById('results');
+
+        // STATE
+        let sourceFile = null;
+        let mediaType = null; // 'video', 'audio', 'gif'
+        let processedBlob = null;
+        let originalSize = 0;
+        let mediaDuration = 0;
+
+        // 1. FILE HANDLING
+        inpFile.addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if(!f) return;
+            loadMedia(f);
+        });
+        
+        lblFile.addEventListener('dragover', (e) => { e.preventDefault(); lblFile.style.borderColor = 'var(--accent)'; });
+        lblFile.addEventListener('dragleave', (e) => { e.preventDefault(); lblFile.style.borderColor = '#333'; });
+        lblFile.addEventListener('drop', (e) => {
+            e.preventDefault(); lblFile.style.borderColor = '#333';
+            if(e.dataTransfer.files[0]) loadMedia(e.dataTransfer.files[0]);
+        });
+
+        function loadMedia(f) {
+            sourceFile = f;
+            originalSize = f.size;
+            const mb = (f.size / (1024*1024)).toFixed(2);
+            fileMeta.innerText = `${f.name} (${mb} MB)`;
+            fileMeta.style.color = "var(--accent)";
+
+            // Reset UI
+            vidPreview.style.display = 'none';
+            audPreview.style.display = 'none';
+            imgPreview.style.display = 'none';
+            document.getElementById('video-options').style.display = 'none';
+            document.getElementById('gif-options').style.display = 'none';
+
+            const url = URL.createObjectURL(f);
+
+            if(f.type.startsWith('video')) {
+                mediaType = 'video';
+                vidPreview.style.display = 'block';
+                vidPreview.src = url;
+                document.getElementById('video-options').style.display = 'block';
+                vidPreview.onloadedmetadata = () => {
+                    mediaDuration = vidPreview.duration;
+                    calcBitrate();
+                };
+            } else if (f.type.startsWith('audio')) {
+                mediaType = 'audio';
+                audPreview.style.display = 'block';
+                audPreview.src = url;
+                audPreview.onloadedmetadata = () => {
+                    mediaDuration = audPreview.duration;
+                    calcBitrate();
+                };
+            } else if (f.type.includes('gif')) {
+                mediaType = 'gif';
+                vidPreview.style.display = 'block'; // We use video tag to play converted gif or canvas
+                // GIF workaround: Browser renders GIF in img tag, we draw to canvas
+                imgPreview.src = url; 
+                // We actually hide the img and show the video container for consistency
+                vidPreview.style.display = 'none';
+                imgPreview.style.display = 'block';
+                document.getElementById('video-options').style.display = 'block';
+                document.getElementById('gif-options').style.display = 'block';
+                // Estimate duration for GIF? Hard without parsing. Assume 5s or ask user. 
+                // We'll treat GIF as infinite loop until manually stopped or frame count.
+                // For simplicity, we will record 5 seconds of the GIF or try to parse duration? 
+                // Simpler: Just rely on size estimation.
+                mediaDuration = 10; // Placeholder
+                calcBitrate();
+            } else {
+                alert("Unsupported Format."); return;
+            }
+
+            settingsGroup.style.opacity = '1';
+            settingsGroup.style.pointerEvents = 'all';
+            btnStart.disabled = false;
+            resultsPanel.style.display = 'none';
+            progFill.style.width = '0%';
+        }
+
+        // 2. TARGET CALCULATION
+        inpTarget.addEventListener('input', calcBitrate);
+
+        function calcBitrate() {
+            if(!mediaDuration) return;
+            const targetMB = parseFloat(inpTarget.value);
+            const targetBits = targetMB * 8 * 1024 * 1024;
+            let bps = Math.floor(targetBits / mediaDuration);
+            
+            // Audio overhead (approx 128k)
+            if(mediaType === 'video') bps -= 128000;
+            
+            if(bps < 10000) bps = 10000; // Floor
+            
+            estBitrateLbl.innerText = `Target Bitrate: ${(bps/1000).toFixed(0)} kbps`;
+            return bps;
+        }
+
+        // 3. MAIN ENGINE
+        async function startCompression() {
+            btnStart.disabled = true;
+            badge.style.display = 'block';
+            progFill.style.width = '0%';
+
+            const targetBps = calcBitrate();
+            const scale = parseFloat(document.getElementById('sel-res').value);
+
+            if (mediaType === 'video') {
+                processVideo(targetBps, scale);
+            } else if (mediaType === 'audio') {
+                processAudio(targetBps);
+            } else if (mediaType === 'gif') {
+                processGif(targetBps, scale);
+            }
+        }
+
+        // --- VIDEO ENGINE (Fixed Audio) ---
+        function processVideo(bps, scale) {
+            // Setup Audio Routing
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const dest = audioCtx.createMediaStreamDestination();
+            const source = audioCtx.createMediaElementSource(vidPreview);
+            
+            // Connect Video Audio -> Stream Destination (Recorder hears it)
+            source.connect(dest);
+            // Do NOT connect to audioCtx.destination (User does not hear it)
+            
+            // Unmute video so source gets data
+            vidPreview.muted = false; 
+            vidPreview.volume = 1.0;
+            vidPreview.currentTime = 0;
+
+            // Canvas Setup
+            const w = vidPreview.videoWidth * scale;
+            const h = vidPreview.videoHeight * scale;
+            hiddenCanvas.width = w; hiddenCanvas.height = h;
+
+            // Stream Setup
+            const canvasStream = hiddenCanvas.captureStream(30);
+            if(dest.stream.getAudioTracks().length > 0) {
+                canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+            }
+
+            const recorder = new MediaRecorder(canvasStream, {
+                mimeType: 'video/webm; codecs=vp9',
+                videoBitsPerSecond: bps
+            });
+
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, {type:'video/webm'});
+                finishProcess(blob);
+                audioCtx.close();
+                vidPreview.muted = true; // Remute for safety
+            };
+
+            recorder.start();
+            vidPreview.play();
+
+            function draw() {
+                if(vidPreview.paused || vidPreview.ended) return;
+                ctx.drawImage(vidPreview, 0, 0, w, h);
+                const pct = ((vidPreview.currentTime / vidPreview.duration)*100).toFixed(1);
+                progFill.style.width = pct + '%';
+                document.getElementById('pct-process').innerText = pct + '%';
+                requestAnimationFrame(draw);
+            }
+            draw();
+
+            vidPreview.onended = () => recorder.stop();
+        }
+
+        // --- AUDIO ENGINE ---
+        function processAudio(bps) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const dest = audioCtx.createMediaStreamDestination();
+            const source = audioCtx.createMediaElementSource(audPreview);
+            source.connect(dest);
+            // Mute output
+            
+            const recorder = new MediaRecorder(dest.stream, {
+                mimeType: 'audio/webm',
+                audioBitsPerSecond: bps
+            });
+
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                finishProcess(new Blob(chunks, {type:'audio/webm'}));
+                audioCtx.close();
+            };
+
+            audPreview.currentTime = 0;
+            recorder.start();
+            audPreview.play();
+
+            const interval = setInterval(() => {
+                const pct = ((audPreview.currentTime / audPreview.duration)*100).toFixed(1);
+                progFill.style.width = pct + '%';
+                document.getElementById('pct-process').innerText = pct + '%';
+                if(audPreview.ended) { clearInterval(interval); recorder.stop(); }
+            }, 100);
+        }
+
+        // --- GIF ENGINE ---
+        function processGif(bps, scale) {
+            const isGifOut = document.getElementById('chk-gif-out').checked;
+            const w = imgPreview.naturalWidth * scale;
+            const h = imgPreview.naturalHeight * scale;
+            hiddenCanvas.width = w; hiddenCanvas.height = h;
+
+            // Strategy: Since we can't parse GIF frames easily without a heavy parser,
+            // we will 'record' the browser rendering the GIF to the canvas.
+            // This is "Screen Recording" the GIF element essentially.
+            
+            if(!isGifOut) {
+                // GIF -> VIDEO (WebM)
+                // Much more efficient, handles transparency by black background usually
+                ctx.fillStyle = "#000";
+                
+                const stream = hiddenCanvas.captureStream(30);
+                const recorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm; codecs=vp9',
+                    videoBitsPerSecond: bps
+                });
+                
+                const chunks = [];
+                recorder.ondataavailable = e => chunks.push(e.data);
+                recorder.onstop = () => finishProcess(new Blob(chunks, {type:'video/webm'}));
+
+                recorder.start();
+                
+                let frames = 0;
+                const maxFrames = 30 * 5; // Record 5 seconds of GIF (Arbitrary limitation of this method)
+                // Note: Precise GIF loop detection is impossible with pure DOM
+                
+                const timer = setInterval(() => {
+                    ctx.fillRect(0,0,w,h);
+                    ctx.drawImage(imgPreview, 0, 0, w, h);
+                    frames++;
+                    const pct = ((frames / maxFrames)*100).toFixed(0);
+                    progFill.style.width = pct + '%';
+                    document.getElementById('pct-process').innerText = pct + '%';
+
+                    if(frames >= maxFrames) {
+                        clearInterval(timer);
+                        recorder.stop();
+                    }
+                }, 1000/30);
+
+            } else {
+                // GIF -> GIF (Using gif.js)
+                // We will capture frames from the img element
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: w,
+                    height: h,
+                    workerScript: workerUrl // Use the blob url
+                });
+
+                let frames = 0;
+                const maxFrames = 30 * 3; // 3 Seconds limit for GIF encoding (it's slow)
+
+                const timer = setInterval(() => {
+                    ctx.drawImage(imgPreview, 0, 0, w, h);
+                    gif.addFrame(ctx, {copy: true, delay: 33});
+                    frames++;
+                    
+                    const pct = ((frames / maxFrames)*50).toFixed(0); // First 50% is recording
+                    progFill.style.width = pct + '%';
+                    document.getElementById('pct-process').innerText = 'Rec: ' + pct + '%';
+
+                    if(frames >= maxFrames) {
+                        clearInterval(timer);
+                        document.getElementById('pct-process').innerText = 'Rendering GIF...';
+                        gif.render();
+                    }
+                }, 1000/30);
+
+                gif.on('finished', (blob) => {
+                    progFill.style.width = '100%';
+                    finishProcess(blob, 'gif');
+                });
+            }
+        }
+
+        function finishProcess(blob, extOverride) {
+            processedBlob = blob;
+            if(extOverride) processedBlob.ext = extOverride;
+            
+            badge.style.display = 'none';
+            btnStart.disabled = false;
+            btnStart.innerText = "CRUSH COMPLETE";
+            resultsPanel.style.display = 'block';
+
+            const oldMB = (originalSize / (1024*1024)).toFixed(2);
+            const newMB = (blob.size / (1024*1024)).toFixed(2);
+            const ratio = (100 - ((blob.size / originalSize) * 100)).toFixed(1);
+            
+            document.getElementById('res-orig').innerText = oldMB + " MB";
+            document.getElementById('res-new').innerText = newMB + " MB";
+            document.getElementById('res-percent').innerText = ratio + "%";
+        }
+
+        function downloadFile() {
+            if(!processedBlob) return;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(processedBlob);
+            
+            let ext = 'webm';
+            if(mediaType === 'audio') ext = 'webm'; // Browser audio recorder is usually webm container
+            if(mediaType === 'gif') ext = 'webm'; // Default convert to video
+            if(processedBlob.ext === 'gif') ext = 'gif'; // Explicit GIF output
+
+            a.download = `crushed_file.${ext}`;
+            a.click();
+        }
+
+    </script>
+</body>
+</html>

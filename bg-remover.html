@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | HYBRID GATEWAY</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600;900&display=swap');
+
+        :root {
+            --bg: #020202;
+            --panel: #080808;
+            --border: #1a1a1a;
+            --accent: #b000ff;
+            --manual-accent: #00ff9d; /* Green for manual tools */
+            --danger: #ff3333;
+            --text-main: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; user-select: none; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex; flex-direction: column;
+        }
+
+        /* FX */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: 999; pointer-events: none; opacity: 0.5;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            height: 70px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 30px; background: rgba(8,8,8,0.95); z-index: 100;
+        }
+        .logo { font-family: 'Rajdhani'; font-weight: 700; font-size: 1.5rem; letter-spacing: 2px; }
+        .logo span { color: var(--accent); }
+        
+        .nav-btn {
+            background: #111; border: 1px solid #333; color: #888; 
+            padding: 8px 20px; font-family: 'Rajdhani'; font-weight: 700; 
+            cursor: pointer; transition: 0.2s; text-decoration: none; font-size: 0.8rem;
+        }
+        .nav-btn:hover { color: white; border-color: white; }
+
+        /* --- VIEW 1: DASHBOARD --- */
+        #view-dashboard {
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 40px; gap: 40px;
+        }
+
+        .engine-grid {
+            display: flex; justify-content: center; gap: 30px;
+            max-width: 1200px; width: 100%;
+        }
+
+        .engine-card {
+            background: var(--panel); border: 1px solid var(--border);
+            padding: 30px; border-radius: 4px; transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            cursor: pointer; position: relative; overflow: hidden;
+            width: 300px; height: 320px; justify-content: space-between;
+        }
+        .engine-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        
+        /* Manual Card Styling */
+        .engine-card.manual:hover { border-color: var(--manual-accent); }
+        .engine-card.manual .card-icon { color: var(--manual-accent); }
+        .engine-card.manual:hover .btn-launch { background: var(--manual-accent); color: black; }
+
+        /* Background Design Elements */
+        .icon-bg {
+            position: absolute; top: -20px; right: -20px; font-size: 8rem; color: #fff;
+            opacity: 0.03; transition: 0.5s; pointer-events: none;
+        }
+        /* Specific Fix: Only Adobe 'A' uses text font, others use icons */
+        .icon-bg.text-mode { font-family: 'Inter', sans-serif; font-weight: 900; }
+        
+        .engine-card:hover .icon-bg { opacity: 0.1; transform: scale(1.1); }
+
+        .card-icon { font-size: 3rem; color: white; margin-top: 10px; }
+        
+        .card-content { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .card-title { font-family: 'Rajdhani'; font-size: 1.2rem; font-weight: 700; color: white; letter-spacing: 1px; }
+        .card-desc { font-size: 0.8rem; color: #666; line-height: 1.4; }
+
+        .btn-launch {
+            width: 100%; padding: 12px; border: none; 
+            background: #1a1a1a; color: white;
+            font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 2px;
+            cursor: pointer; transition: 0.2s; text-transform: uppercase; font-size: 0.8rem;
+        }
+        .engine-card:hover .btn-launch { background: var(--accent); color: black; }
+
+
+        /* --- VIEW 2: MANUAL WORKSPACE --- */
+        #view-manual {
+            display: none; flex: 1; position: relative;
+            background: #050505;
+        }
+
+        .manual-sidebar {
+            width: 250px; background: #0a0a0a; border-right: 1px solid #222;
+            display: flex; flex-direction: column; padding: 20px; gap: 20px;
+            z-index: 50;
+        }
+
+        .sidebar-section {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .section-label {
+            font-size: 0.7rem; color: #555; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px;
+        }
+
+        .tool-row { display: flex; gap: 10px; }
+        
+        .tool-btn {
+            flex: 1; height: 45px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #111; border: 1px solid #333; color: #888;
+            font-size: 0.8rem; cursor: pointer; border-radius: 4px; transition: 0.2s;
+        }
+        .tool-btn i { font-size: 1rem; margin-bottom: 3px; }
+        .tool-btn span { font-size: 0.6rem; font-family: 'Rajdhani'; text-transform: uppercase; font-weight: 700; }
+        
+        .tool-btn:hover { background: #222; color: white; }
+        .tool-btn.active { background: #222; color: var(--manual-accent); border-color: var(--manual-accent); }
+
+        /* Action Buttons */
+        .btn-action {
+            width: 100%; padding: 12px; border: 1px solid #333; background: #111; color: #ccc;
+            font-family: 'Rajdhani'; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+            border-radius: 4px;
+        }
+        .btn-action:hover { background: #222; color: white; border-color: white; }
+        
+        .btn-export {
+            background: var(--manual-accent); color: black; border: none; margin-top: auto; padding: 15px;
+        }
+        .btn-export:hover { background: white; color: black; }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1; position: relative; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            background: #050505;
+        }
+        .checkerboard {
+            background-image: linear-gradient(45deg, #1a1a1a 25%, transparent 25%), linear-gradient(-45deg, #1a1a1a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1a1a1a 75%), linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+            background-color: #080808; background-size: 20px 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 1px solid #333;
+        }
+        canvas { display: block; cursor: crosshair; max-width: 90vw; max-height: 85vh; }
+        
+        /* Floating Settings */
+        .settings-overlay {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(10,10,10,0.95); border: 1px solid #333; padding: 10px 20px;
+            border-radius: 30px; display: flex; align-items: center; gap: 15px;
+            color: #ccc; font-size: 0.8rem; z-index: 60;
+        }
+        input[type="range"] { height: 3px; background: #333; width: 100px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <div class="header">
+        <div class="logo">CUTOUT <span>STUDIO</span></div>
+        <div style="display: flex; gap: 10px;">
+            <button class="nav-btn" id="btn-back" style="display:none;" onclick="showDashboard()">BACK TO MENU</button>
+            <a href="index.html" class="nav-btn">RETURN TO SYSTEM</a>
+        </div>
+    </div>
+
+    <!-- VIEW 1: DASHBOARD -->
+    <div id="view-dashboard">
+        <div class="engine-grid">
+            
+            <!-- ADOBE (Icon is 'A' text) -->
+            <div class="engine-card" onclick="launchExternal('adobe')">
+                <span class="icon-bg text-mode">A</span>
+                <div class="card-icon">
+                    <span style="font-family:'Inter', sans-serif; font-weight:900; font-size:3.5rem; color:#ff0000; line-height:1;">A</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">ADOBE EXPRESS</div>
+                    <div class="card-desc">Industry Standard AI. Requires free account. Opens in App Window.</div>
+                </div>
+                <button class="btn-launch">OPEN APP WINDOW</button>
+            </div>
+
+            <!-- REMOVE.BG (Icon is FontAwesome) -->
+            <div class="engine-card" onclick="launchExternal('removebg')">
+                <i class="fa-solid fa-layer-group icon-bg"></i>
+                <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="card-content">
+                    <div class="card-title">REMOVE.BG</div>
+                    <div class="card-desc">Fastest AI option. Instant results. Opens in App Window.</div>
+                </div>
+                <button class="btn-launch">OPEN APP WINDOW</button>
+            </div>
+
+            <!-- MANUAL STUDIO (Icon is FontAwesome) -->
+            <div class="engine-card manual" onclick="openManualStudio()">
+                <i class="fa-solid fa-wand-magic-sparkles icon-bg"></i>
+                <div class="card-icon"><i class="fa-solid fa-pen-nib"></i></div>
+                <div class="card-content">
+                    <div class="card-title">MANUAL STUDIO</div>
+                    <div class="card-desc">Do it yourself. Magic Wand, Lasso, and Eraser tools. Runs 100% locally.</div>
+                </div>
+                <button class="btn-launch">OPEN EDITOR</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- VIEW 2: MANUAL EDITOR -->
+    <div id="view-manual">
+        <!-- Sidebar -->
+        <div class="manual-sidebar">
+            
+            <div class="sidebar-section">
+                <div class="section-label">SELECT TOOL</div>
+                <div class="tool-row">
+                    <div class="tool-btn active" onclick="setTool('wand')">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>WAND</span>
+                    </div>
+                    <div class="tool-btn" onclick="setTool('lasso-cut')">
+                        <i class="fa-solid fa-scissors"></i>
+                        <span>LASSO</span>
+                    </div>
+                    <div class="tool-btn" onclick="setTool('eraser')">
+                        <i class="fa-solid fa-eraser"></i>
+                        <span>ERASER</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-label">ACTIONS</div>
+                <button class="btn-action" onclick="undo()">
+                    <i class="fa-solid fa-rotate-left"></i> UNDO STEP
+                </button>
+                <button class="btn-action" onclick="resetCanvas()" style="margin-top:5px;">
+                    <i class="fa-solid fa-trash"></i> RESET ALL
+                </button>
+            </div>
+
+            <!-- Spacer to push Export to bottom -->
+            <div style="flex: 1;"></div>
+
+            <button class="btn-action btn-export" onclick="exportManual()">
+                <i class="fa-solid fa-download"></i> EXPORT PNG
+            </button>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas-container">
+            <!-- Settings Overlay -->
+            <div class="settings-overlay" id="tool-settings">
+                <span>Tolerance</span>
+                <input type="range" id="rng-tol" min="0" max="100" value="30" oninput="document.getElementById('lbl').innerText=this.value">
+                <span id="lbl">30</span>
+            </div>
+
+            <!-- Upload Prompt -->
+            <input type="file" id="manual-file-inp" accept="image/*" style="display:none">
+            <div id="manual-upload-prompt" style="position:absolute; color:#666; text-align:center; cursor:pointer; z-index:10;" onclick="document.getElementById('manual-file-inp').click()">
+                <i class="fa-solid fa-plus-circle" style="font-size: 3rem; margin-bottom: 10px; color:#333; transition:0.3s"></i><br>
+                <span style="font-family:'Rajdhani'; font-weight:700; letter-spacing:1px;">CLICK TO LOAD IMAGE</span>
+            </div>
+
+            <div class="checkerboard" id="canvas-wrapper" style="display:none;">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- NAVIGATION LOGIC ---
+        function launchExternal(type) {
+            let url = "";
+            if(type === 'adobe') url = "https://new.express.adobe.com/tools/remove-background";
+            if(type === 'removebg') url = "https://www.remove.bg/upload";
+
+            const w = 1100, h = 850;
+            const left = (screen.width/2)-(w/2);
+            const top = (screen.height/2)-(h/2);
+            window.open(url, 'TPS_Cloud', `width=${w},height=${h},top=${top},left=${left},toolbar=no,menubar=no,status=no`);
+        }
+
+        function openManualStudio() {
+            document.getElementById('view-dashboard').style.display = 'none';
+            document.getElementById('view-manual').style.display = 'flex';
+            document.getElementById('btn-back').style.display = 'block';
+            if(!ctx) initCanvas();
+        }
+
+        function showDashboard() {
+            document.getElementById('view-manual').style.display = 'none';
+            document.getElementById('view-dashboard').style.display = 'flex';
+            document.getElementById('btn-back').style.display = 'none';
+        }
+
+        // --- MANUAL EDITOR LOGIC ---
+        let canvas, ctx;
+        let history = [], historyStep = -1;
+        let currentTool = 'wand';
+        let isDrawing = false;
+        let points = [];
+
+        function initCanvas() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d', {willReadFrequently: true});
+            
+            const inp = document.getElementById('manual-file-inp');
+            inp.addEventListener('change', loadFile);
+            
+            canvas.addEventListener('mousedown', startAction);
+            canvas.addEventListener('mousemove', moveAction);
+            window.addEventListener('mouseup', endAction);
+        }
+
+        function loadFile(e) {
+            const f = e.target.files[0];
+            if(!f) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    document.getElementById('manual-upload-prompt').style.display = 'none';
+                    document.getElementById('canvas-wrapper').style.display = 'block';
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    if(canvas.width > 2000) {
+                        const s = 2000/canvas.width;
+                        canvas.width = 2000; canvas.height = img.height*s;
+                    }
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Reset History
+                    history = []; historyStep = -1;
+                    saveHistory();
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(f);
+        }
+
+        // Tool Switching
+        function setTool(t) {
+            currentTool = t;
+            const btns = document.querySelectorAll('.tool-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            
+            // Highlight active tool
+            if(t==='wand') btns[0].classList.add('active');
+            if(t==='lasso-cut') btns[1].classList.add('active');
+            if(t==='eraser') btns[2].classList.add('active');
+
+            // Update settings
+            const setUI = document.getElementById('tool-settings');
+            if(t === 'wand') {
+                setUI.innerHTML = `<span>Tolerance</span><input type="range" id="rng-tol" min="0" max="100" value="30" oninput="document.getElementById('lbl').innerText=this.value"><span id="lbl">30</span>`;
+            } else if(t === 'eraser') {
+                setUI.innerHTML = `<span>Brush Size</span><input type="range" id="rng-size" min="5" max="100" value="20" oninput="document.getElementById('lbl').innerText=this.value"><span id="lbl">20</span>`;
+            } else {
+                setUI.innerHTML = `<span style="color:#00ff9d">Draw around area to delete</span>`;
+            }
+        }
+
+        // Canvas Actions
+        function startAction(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            if(currentTool === 'wand') {
+                floodFill(Math.floor(x), Math.floor(y));
+            } else if(currentTool === 'lasso-cut') {
+                isDrawing = true;
+                points = [{x,y}];
+                ctx.beginPath();
+                ctx.moveTo(x,y);
+                ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2;
+            } else if(currentTool === 'eraser') {
+                isDrawing = true;
+                erase(x,y);
+            }
+        }
+
+        function moveAction(e) {
+            if(!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if(currentTool === 'lasso-cut') {
+                points.push({x,y});
+                ctx.lineTo(x,y);
+                ctx.stroke();
+            } else if(currentTool === 'eraser') {
+                erase(x,y);
+            }
+        }
+
+        function endAction() {
+            if(!isDrawing) return;
+            isDrawing = false;
+            
+            if(currentTool === 'lasso-cut') {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    ctx.drawImage(img,0,0);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+                    ctx.closePath();
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fill();
+                    ctx.restore();
+                    saveHistory();
+                };
+                img.src = history[historyStep];
+            } else if(currentTool === 'eraser') {
+                saveHistory();
+            }
+        }
+
+        // Logic
+        function erase(x,y) {
+            const sz = document.getElementById('rng-size') ? document.getElementById('rng-size').value : 20;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, sz/2, 0, Math.PI*2);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function floodFill(startX, startY) {
+            const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            const d = imgData.data;
+            const w = canvas.width;
+            const idx = (startY*w + startX)*4;
+            const sr=d[idx], sg=d[idx+1], sb=d[idx+2], sa=d[idx+3];
+            
+            if(sa===0) return;
+
+            const tol = document.getElementById('rng-tol') ? document.getElementById('rng-tol').value : 30;
+            const visited = new Uint8Array(w*canvas.height);
+            const stack = [idx];
+
+            while(stack.length > 0) {
+                const i = stack.pop();
+                if(visited[i/4]) continue;
+                
+                const diff = Math.abs(d[i]-sr) + Math.abs(d[i+1]-sg) + Math.abs(d[i+2]-sb);
+                if(diff <= tol*3 && d[i+3]!==0) {
+                    d[i+3] = 0; visited[i/4] = 1;
+                    const x=(i/4)%w; const y=Math.floor((i/4)/w);
+                    if(x>0) stack.push(i-4);
+                    if(x<w-1) stack.push(i+4);
+                    if(y>0) stack.push(i-w*4);
+                    if(y<canvas.height-1) stack.push(i+w*4);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            saveHistory();
+        }
+
+        function saveHistory() {
+            historyStep++;
+            if(historyStep < history.length) history.length = historyStep;
+            history.push(canvas.toDataURL());
+            if(history.length > 10) { history.shift(); historyStep--; }
+        }
+
+        function undo() {
+            if(historyStep > 0) {
+                historyStep--;
+                const img = new Image();
+                img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
+                img.src = history[historyStep];
+            }
+        }
+
+        function resetCanvas() {
+            if(confirm("Reset entire image?")) {
+                if(history.length>0) {
+                    const img = new Image();
+                    img.onload = () => { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); saveHistory(); };
+                    img.src = history[0];
+                }
+            }
+        }
+
+        function exportManual() {
+            const a = document.createElement('a');
+            a.download = 'cutout.png';
+            a.href = canvas.toDataURL();
+            a.click();
+        }
+
+    </script>
+</body>
+</html>

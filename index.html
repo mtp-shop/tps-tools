@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | COMMAND CENTER</title>
+    <!-- FAVICON ADDED -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --bg: #020202;
+            --sidebar: rgba(5, 5, 5, 0.95);
+            --card-bg: rgba(20, 20, 20, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            
+            /* RED SHIFT PALETTE */
+            --primary: #ff003c;
+            --dim-red: rgba(255, 0, 60, 0.3);
+            --text: #e0e0e0;
+            
+            --font-head: 'Rajdhani', sans-serif;
+            --font-code: 'Share Tech Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; user-select: none; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-head);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* --- FX LAYERS --- */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0), rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2));
+            background-size: 100% 4px; z-index: 900; pointer-events: none; opacity: 0.6;
+        }
+        
+        .retro-grid {
+            position: fixed; bottom: 0; left: -50%; width: 200%; height: 60vh;
+            background-image: 
+                linear-gradient(var(--dim-red) 1px, transparent 1px),
+                linear-gradient(90deg, var(--dim-red) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+            opacity: 0.4; z-index: -1;
+            animation: grid-scroll 3s linear infinite;
+            mask-image: linear-gradient(to top, rgba(0,0,0,1), transparent);
+        }
+        @keyframes grid-scroll { 0% { background-position: 0 0; } 100% { background-position: 0 50px; } }
+
+        /* --- BOOT SCREEN --- */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-family: var(--font-code);
+            transition: opacity 0.8s ease, filter 0.8s ease;
+        }
+        
+        .boot-container { width: 320px; position: relative; }
+        
+        .boot-logo {
+            font-size: 2.5rem; font-weight: 700; color: #fff; text-align: center; margin-bottom: 20px;
+            letter-spacing: 5px; text-shadow: 0 0 15px var(--primary);
+        }
+        .boot-logo span { color: var(--primary); }
+        
+        .progress-frame {
+            width: 100%; height: 6px; border: 1px solid #333; padding: 1px;
+            margin-bottom: 10px; background: #050505;
+        }
+        .progress-bar {
+            height: 100%; width: 0%; background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            transition: width 0.1s linear;
+        }
+        
+        .boot-text {
+            display: flex; justify-content: space-between; font-size: 0.7rem; color: #666; text-transform: uppercase;
+        }
+        .boot-log { 
+            height: 60px; overflow: hidden; margin-top: 15px; border-top: 1px solid #111; padding-top: 10px;
+            font-size: 0.65rem; color: #444; display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        .log-entry { margin-bottom: 2px; }
+        .log-entry::before { content: '>> '; color: var(--primary); }
+
+        /* --- MAIN UI --- */
+        #main-ui {
+            display: flex; width: 100%; height: 100%;
+            /* If JS detects session, these will be overridden immediately */
+            opacity: 0; transform: scale(0.98);
+            transition: opacity 1s ease, transform 1s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+
+        /* --- SIDEBAR --- */
+        aside {
+            width: 280px; height: 100%; background: var(--sidebar);
+            border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 30px;
+            backdrop-filter: blur(10px); z-index: 50;
+        }
+        .logo-area { 
+            margin-bottom: 50px; display: flex; align-items: center; gap: 15px; 
+            border-bottom: 1px solid var(--border); padding-bottom: 20px;
+        }
+        .logo-img { width: 40px; height: auto; filter: drop-shadow(0 0 8px var(--primary)); }
+        .logo-text { font-weight: 800; font-size: 1.6rem; letter-spacing: 2px; color: white; text-shadow: 0 0 15px var(--primary); }
+        
+        .nav-label { font-size: 0.7rem; color: var(--primary); font-family: var(--font-code); margin-bottom: 15px; letter-spacing: 2px; opacity: 0.8; }
+        .nav-item {
+            padding: 15px; margin-bottom: 8px; color: #888; text-decoration: none; font-weight: 600; font-size: 1rem;
+            letter-spacing: 1px; transition: 0.3s; display: flex; align-items: center; gap: 15px;
+            border: 1px solid transparent; position: relative; background: rgba(255,255,255,0.02);
+        }
+        .nav-item:hover { background: rgba(255, 0, 60, 0.1); color: white; border-color: rgba(255, 0, 60, 0.3); padding-left: 25px; box-shadow: 0 0 15px rgba(255, 0, 60, 0.1); }
+        .nav-item.active { background: var(--text); color: black; font-weight: 800; border-color: white; }
+        
+        .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+        .ext-btn { 
+            padding: 12px; border: 1px solid var(--border); text-decoration: none; 
+            display: flex; align-items: center; gap: 15px; transition: 0.3s; background: black; 
+        }
+        .ext-btn:hover { border-color: var(--primary); box-shadow: 0 0 15px var(--dim-red); }
+        .ext-btn i { color: #666; transition: 0.3s; width: 20px; text-align: center;}
+        .ext-btn:hover i { color: var(--primary); }
+        .link-text div:first-child { font-weight: 700; font-size: 0.9rem; color: white; }
+        .link-text div:last-child { font-size: 0.6rem; color: #888; font-family: var(--font-code); }
+
+        /* --- DASHBOARD --- */
+        main { flex: 1; padding: 50px; overflow-y: auto; position: relative; background: radial-gradient(circle at top right, rgba(30,10,10,0.4), transparent 40%); }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 50px; }
+        
+        .header h1 { 
+            font-weight: 800; font-size: 3.5rem; color: white; line-height: 1; 
+            text-shadow: 2px 2px 0px var(--primary);
+            animation: text-flicker 4s infinite;
+        }
+        @keyframes text-flicker { 
+            0% { opacity: 1; } 2% { opacity: 0.8; } 4% { opacity: 1; } 
+            40% { opacity: 1; } 42% { opacity: 0.1; } 43% { opacity: 1; }
+            98% { opacity: 1; } 99% { opacity: 0.5; } 100% { opacity: 1; } 
+        }
+
+        .header p { color: var(--primary); font-family: var(--font-code); font-size: 0.8rem; letter-spacing: 2px; margin-top: 5px; }
+        .clock-time { font-family: var(--font-code); font-size: 3rem; color: white; text-shadow: 0 0 20px var(--primary); text-align: right; }
+        
+        .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; perspective: 1000px; }
+        .tool-card {
+            background: rgba(10,10,10,0.8); border: 1px solid var(--border); height: 260px; padding: 30px;
+            position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+            transition: 0.4s; backdrop-filter: blur(10px); clip-path: polygon(0 0, 100% 0, 100% 85%, 90% 100%, 0 100%);
+            cursor: pointer; text-decoration: none;
+        }
+        .tool-card:hover { transform: translateY(-10px) scale(1.02); border-color: var(--primary); box-shadow: 0 0 30px var(--dim-red); }
+        .card-icon { font-size: 2.5rem; margin-bottom: 20px; color: #666; transition: 0.3s; }
+        .tool-card:hover .card-icon { color: var(--primary); filter: drop-shadow(0 0 15px var(--primary)); }
+        .card-info h3 { font-size: 1.5rem; color: white; margin-bottom: 5px; }
+        .card-info p { font-family: var(--font-code); font-size: 0.75rem; color: #888; }
+        
+        .launch-btn {
+            position: absolute; bottom: 20px; right: 20px; width: 40px; height: 40px; 
+            border: 1px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: 0.3s; color: white;
+        }
+        .tool-card:hover .launch-btn { opacity: 1; transform: rotate(-45deg); background: var(--primary); border-color: var(--primary); }
+
+        /* --- ASSET GUARD OVERLAY --- */
+        #ag-app { display: none; position: fixed; inset: 0; background: #020202; z-index: 1000; }
+        .ag-top { height: 70px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background: #050505; }
+        .ag-brand { font-size: 1.5rem; font-weight: 800; color: white; letter-spacing: 2px; }
+        .ag-close { background: transparent; border: 1px solid #333; color: white; padding: 10px 30px; cursor: pointer; font-family: var(--font-head); font-weight: 700; transition: 0.3s; }
+        .ag-close:hover { border-color: var(--primary); color: var(--primary); }
+        
+        .ag-body { display: flex; height: calc(100vh - 70px); }
+        .ag-sidebar { width: 350px; border-right: 1px solid #333; padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Updated Canvas Area for Asset Guard */
+        .ag-main { 
+            flex: 1; background: #080808; 
+            display: flex; justify-content: center; align-items: center; 
+            position: relative; overflow: hidden;
+        }
+        .ag-main::before { content:''; position: absolute; inset:0; background: radial-gradient(circle, transparent 20%, #000 90%); pointer-events: none; z-index: 5; }
+        
+        canvas { 
+            max-width: 90%; max-height: 90%; 
+            border: 1px solid #333; box-shadow: 0 0 50px rgba(0,0,0,0.5); 
+            z-index: 10; cursor: crosshair;
+        }
+        
+        .upload-box { padding: 20px; border: 1px dashed #444; text-align: center; cursor: pointer; transition: 0.3s; color: #666; font-size: 0.8rem; }
+        .upload-box:hover { border-color: var(--primary); color: var(--primary); }
+        .upload-box.active { border-style: solid; border-color: white; color: white; background: rgba(255,255,255,0.05); }
+
+    </style>
+</head>
+<body>
+
+    <!-- BOOT LOADER -->
+    <div id="boot-screen">
+        <div class="boot-container">
+            <div class="boot-logo">TPS <span>TOOLS</span></div>
+            <div class="progress-frame">
+                <div class="progress-bar" id="boot-bar"></div>
+            </div>
+            <div class="boot-text">
+                <span id="boot-msg">INITIALIZING...</span>
+                <span id="boot-pct">0%</span>
+            </div>
+            <div class="boot-log" id="boot-log"></div>
+        </div>
+    </div>
+
+    <!-- FX LAYERS -->
+    <div class="scanlines"></div>
+    <div class="retro-grid"></div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="main-ui">
+        <!-- SIDEBAR -->
+        <aside>
+            <div class="logo-area">
+                <img src="logo.png" alt="TPS" class="logo-img" onerror="this.style.display='none'">
+                <div class="logo-text">TPS<span style="color:var(--primary)">TEMPLE</span></div>
+            </div>
+
+            <div class="nav-label">SYSTEM_NAV //</div>
+            <a href="#" class="nav-item active"><i class="fa-solid fa-grid-2"></i> COMMAND CENTER</a>
+
+            <div class="nav-label" style="margin-top: 30px;">MODULES //</div>
+            <a href="#" class="nav-item" onclick="openAssetGuard()"><i class="fa-solid fa-shield-halved"></i> Asset Guard</a>
+            <a href="bg-remover.html" class="nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i> BG REMOVE</a>
+            <a href="resizer.html" class="nav-item"><i class="fa-solid fa-expand"></i> Image Scale</a>
+            <a href="ripper.html" class="nav-item"><i class="fa-brands fa-youtube"></i> YT To MP3/4</a>
+            <a href="converter.html" class="nav-item"><i class="fa-solid fa-rotate"></i> Format Shifter</a>
+            <a href="compressor.html" class="nav-item"><i class="fa-solid fa-file-zipper"></i> Data Crusher</a>
+
+            <div class="sidebar-bottom">
+                <a href="https://discord.gg/uXx2aBjQut" target="_blank" class="ext-btn">
+                    <i class="fa-brands fa-discord"></i>
+                    <div class="link-text">
+                        <div>DISCORD</div>
+                        <div>JOIN SERVER</div>
+                    </div>
+                </a>
+                
+                <a href="https://tpstemple.vercel.app/" target="_blank" class="ext-btn">
+                    <i class="fa-solid fa-globe"></i>
+                    <div class="link-text">
+                        <div>WEBSITE</div>
+                        <div>tpstemple.vercel.app</div>
+                    </div>
+                </a>
+            </div>
+        </aside>
+
+        <!-- DASHBOARD CONTENT -->
+        <main>
+            <div class="header">
+                <div>
+                    <h1>TPS TOOLS <span style="color:var(--primary)">V1.0</span></h1>
+                    <p>SECURE TERMINAL // READY FOR INPUT</p>
+                </div>
+                <div>
+                    <div class="clock-time" id="sys-clock">00:00</div>
+                </div>
+            </div>
+
+            <div class="tools-grid">
+                <!-- Asset Guard -->
+                <div class="tool-card" onclick="openAssetGuard()">
+                    <div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="card-info"><h3>Watermark Asset Guard</h3><p>Video/Image watermarking. Lossless.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </div>
+
+                <!-- Other Tools -->
+                <a href="bg-remover.html" class="tool-card">
+                    <div class="card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div class="card-info"><h3>BG REMOVER</h3><p>AI Background removal + Manual tools.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </a>
+                <a href="resizer.html" class="tool-card">
+                    <div class="card-icon"><i class="fa-solid fa-expand"></i></div>
+                    <div class="card-info"><h3>IMAGE RESIZER</h3><p>Upscaling with pixel-art preservation.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </a>
+                <a href="ripper.html" class="tool-card">
+                    <div class="card-icon"><i class="fa-brands fa-youtube"></i></div>
+                    <div class="card-info"><h3>YT TO MP3/MP4</h3><p>Video to MP3/MP4 conversion.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </a>
+                <a href="converter.html" class="tool-card">
+                    <div class="card-icon"><i class="fa-solid fa-rotate"></i></div>
+                    <div class="card-info"><h3>Format Shifter</h3><p>Batch convert PNG, JPG, WEBP, SVG.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </a>
+                <a href="compressor.html" class="tool-card">
+                    <div class="card-icon"><i class="fa-solid fa-file-zipper"></i></div>
+                    <div class="card-info"><h3>Data Crusher</h3><p>Target specific file sizes for videos.</p></div>
+                    <div class="launch-btn"><i class="fa-solid fa-arrow-right"></i></div>
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <!-- ASSET GUARD OVERLAY -->
+    <div id="ag-app">
+        <div class="ag-top">
+            <div class="ag-brand">ASSET <span>GUARD</span></div>
+            <button class="ag-close" onclick="closeAssetGuard()">EXIT SYSTEM</button>
+        </div>
+        <div class="ag-body">
+            <div class="ag-sidebar">
+                <!-- Source Input -->
+                <div>
+                    <div style="font-size:0.7rem; color:#444; margin-bottom:5px;">SOURCE</div>
+                    <input type="file" id="ag-src" style="display:none" accept="image/*, video/*" onchange="loadAgSrc(this)">
+                    <div class="upload-box" id="box-src" onclick="document.getElementById('ag-src').click()">UPLOAD FILE</div>
+                </div>
+                <!-- Watermark Input -->
+                <div>
+                    <div style="font-size:0.7rem; color:#444; margin-bottom:5px;">WATERMARK</div>
+                    <input type="file" id="ag-wm" style="display:none" accept="image/png" onchange="loadAgWm(this)">
+                    <div class="upload-box" id="box-wm" onclick="document.getElementById('ag-wm').click()">UPLOAD PNG</div>
+                </div>
+                <!-- Controls -->
+                <div style="margin-top:auto">
+                    <div style="display:flex; justify-content:space-between; color:#666; font-size:0.8rem; margin-bottom:5px;"><span>OPACITY</span></div>
+                    <input type="range" style="width:100%" min="0" max="1" step="0.05" value="0.5" oninput="agConfig.opacity=this.value; if(agState.type==='image') renderFrame();">
+                    
+                    <div style="display:flex; justify-content:space-between; color:#666; font-size:0.8rem; margin-top:15px; margin-bottom:5px;"><span>SCALE</span></div>
+                    <input type="range" style="width:100%" min="0.1" max="1.5" step="0.05" value="0.3" oninput="agConfig.scale=this.value; if(agState.type==='image') renderFrame();">
+                </div>
+                <!-- Export -->
+                <button onclick="exportMedia()" style="width:100%; background:#222; color:white; border:none; padding:15px; cursor:pointer; font-weight:700; margin-top:20px;">EXPORT</button>
+                <div id="ag-status" style="color:var(--primary); font-size:0.7rem; text-align:center; margin-top:5px; height:15px;"></div>
+            </div>
+            
+            <div class="ag-main">
+                <canvas id="ag-can"></canvas>
+                <video id="ag-video" style="display:none;" muted playsinline crossorigin="anonymous"></video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BOOT SEQUENCE LOGIC (Check Session Storage) ---
+        (function() {
+            const screen = document.getElementById('boot-screen');
+            const mainUI = document.getElementById('main-ui');
+            const bar = document.getElementById('boot-bar');
+            const pct = document.getElementById('boot-pct');
+            const msg = document.getElementById('boot-msg');
+            const log = document.getElementById('boot-log');
+
+            // IF ALREADY BOOTED, SKIP ANIMATION
+            if (sessionStorage.getItem('tps_booted')) {
+                screen.style.display = 'none';
+                mainUI.style.opacity = '1';
+                mainUI.style.transform = 'scale(1)';
+                return;
+            }
+
+            // ELSE RUN ANIMATION
+            const logs = [
+                "ALLOCATING_MEM...", "CHECK_BIOS...", "MOUNT_DRIVE_0...", 
+                "CONNECT_SECURE_SOCKET...", "DECRYPT_KEY...", "LOAD_GUI_ENGINE...", 
+                "RENDERING_DOM...", "SYSTEM_READY"
+            ];
+            
+            let progress = 0;
+            const duration = 2000;
+            const intervalTime = 30;
+            const step = 100 / (duration / intervalTime);
+
+            function addLog(txt) {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                div.innerText = txt;
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            const timer = setInterval(() => {
+                progress += step;
+                if(progress > 100) progress = 100;
+
+                bar.style.width = progress + "%";
+                pct.innerText = Math.floor(progress) + "%";
+
+                if(Math.random() > 0.85) {
+                    const txt = logs[Math.floor(Math.random() * logs.length)];
+                    addLog(txt);
+                    msg.innerText = txt;
+                }
+
+                if(progress === 100) {
+                    clearInterval(timer);
+                    addLog("BOOT_COMPLETE");
+                    
+                    // MARK SESSION AS BOOTED
+                    sessionStorage.setItem('tps_booted', 'true');
+
+                    setTimeout(() => {
+                        screen.style.opacity = '0';
+                        screen.style.filter = 'blur(10px)';
+                        setTimeout(() => {
+                            screen.style.display = 'none';
+                            mainUI.style.opacity = '1';
+                            mainUI.style.transform = 'scale(1)';
+                        }, 500);
+                    }, 300);
+                }
+            }, intervalTime);
+        })();
+
+        // --- CLOCK ---
+        setInterval(() => {
+            document.getElementById('sys-clock').innerText = new Date().toLocaleTimeString('en-GB');
+        }, 1000);
+
+        // --- ASSET GUARD FULL ENGINE ---
+        const agApp = document.getElementById('ag-app');
+        const canvas = document.getElementById('ag-can');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('ag-video');
+        
+        let agState = { type: 'none', baseImg: null, wmImg: null, wmLoaded: false };
+        let agConfig = { opacity: 0.5, scale: 0.3, x: 0, y: 0 };
+        let renderLoopId = null;
+        let isDragging = false;
+
+        function openAssetGuard() { agApp.style.display = 'block'; }
+        
+        function closeAssetGuard() { 
+            agApp.style.display = 'none'; 
+            stopRenderLoop(); video.pause(); video.src = "";
+            agState = { type: 'none', baseImg: null, wmImg: null, wmLoaded: false };
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            document.getElementById('box-src').classList.remove('active');
+            document.getElementById('box-src').innerText = "UPLOAD FILE";
+            document.getElementById('box-wm').classList.remove('active');
+            document.getElementById('box-wm').innerText = "UPLOAD PNG";
+        }
+
+        // LOAD SOURCE
+        function loadAgSrc(input) {
+            if(!input.files[0]) return;
+            const file = input.files[0];
+            const url = URL.createObjectURL(file);
+            stopRenderLoop();
+            
+            if(file.type.startsWith('video')) {
+                agState.type = 'video';
+                video.src = url;
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                    fitCanvas();
+                    agConfig.x = canvas.width/2; agConfig.y = canvas.height/2;
+                    video.loop = true; video.muted = true; video.play(); 
+                    startRenderLoop();
+                };
+                document.getElementById('box-src').classList.add('active');
+                document.getElementById('box-src').innerText = "VIDEO LOADED";
+            } else {
+                agState.type = 'image';
+                agState.baseImg = new Image();
+                agState.baseImg.onload = () => {
+                    canvas.width = agState.baseImg.width; canvas.height = agState.baseImg.height;
+                    fitCanvas();
+                    agConfig.x = canvas.width/2; agConfig.y = canvas.height/2; 
+                    renderFrame();
+                };
+                agState.baseImg.src = url;
+                document.getElementById('box-src').classList.add('active');
+                document.getElementById('box-src').innerText = "IMAGE LOADED";
+            }
+        }
+
+        function fitCanvas() {
+            // Logic to keep canvas visible within viewport if too huge
+            if(canvas.width > 1200) {
+               // Just for CSS display, the internal resolution stays high
+               canvas.style.width = '100%';
+               canvas.style.height = 'auto';
+            }
+        }
+
+        // LOAD WATERMARK
+        function loadAgWm(input) {
+            if(!input.files[0]) return;
+            const url = URL.createObjectURL(input.files[0]);
+            agState.wmImg = new Image();
+            agState.wmImg.onload = () => { 
+                agState.wmLoaded = true; 
+                renderFrame(); 
+            };
+            agState.wmImg.src = url;
+            document.getElementById('box-wm').classList.add('active');
+            document.getElementById('box-wm').innerText = "LOGO LOADED";
+        }
+
+        // RENDER LOOP
+        function startRenderLoop() { const loop = () => { renderFrame(); renderLoopId = requestAnimationFrame(loop); }; loop(); }
+        function stopRenderLoop() { if(renderLoopId) cancelAnimationFrame(renderLoopId); }
+        
+        function renderFrame() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            
+            // Draw Background
+            if(agState.type === 'video') ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            else if(agState.type === 'image') ctx.drawImage(agState.baseImg, 0, 0);
+            
+            // Draw Watermark
+            if(agState.wmLoaded) {
+                const w = canvas.width * agConfig.scale;
+                const h = agState.wmImg.height * (w / agState.wmImg.width);
+                ctx.save(); ctx.globalAlpha = agConfig.opacity;
+                ctx.drawImage(agState.wmImg, agConfig.x - (w/2), agConfig.y - (h/2), w, h);
+                ctx.restore();
+            }
+        }
+
+        // DRAG LOGIC
+        canvas.addEventListener('mousedown', () => isDragging = true);
+        window.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mousemove', (e) => {
+            if(isDragging && agState.wmLoaded) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                agConfig.x = (e.clientX - rect.left) * scaleX;
+                agConfig.y = (e.clientY - rect.top) * scaleY;
+                if(agState.type === 'image') renderFrame();
+            }
+        });
+
+        // EXPORT LOGIC
+        async function exportMedia() {
+            const status = document.getElementById('ag-status');
+            
+            if(agState.type === 'none') return;
+
+            if(agState.type === 'image') {
+                const a = document.createElement('a');
+                a.download = 'TPSTEMPLE_Guarded.png'; a.href = canvas.toDataURL(); a.click(); 
+                return;
+            }
+
+            // Video Export
+            status.innerText = "INITIALIZING RENDER...";
+            stopRenderLoop(); video.pause();
+
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const dest = audioCtx.createMediaStreamDestination();
+            const source = audioCtx.createMediaElementSource(video);
+            source.connect(dest);
+
+            const stream = canvas.captureStream(30);
+            const track = dest.stream.getAudioTracks()[0];
+            if(track) stream.addTrack(track);
+
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9', videoBitsPerSecond: 6000000 });
+            const chunks = [];
+            
+            recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, {type: 'video/webm'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob); a.download = 'TPSTEMPLE_Guarded.webm'; a.click();
+                status.innerText = "EXPORT COMPLETE";
+                audioCtx.close();
+                // Restart Loop
+                video.loop = true; video.muted = true; video.currentTime = 0; video.play(); startRenderLoop();
+            };
+
+            video.loop = false; video.muted = false; video.currentTime = 0;
+            video.onended = () => { recorder.stop(); };
+
+            status.innerText = "RENDERING VIDEO...";
+            recorder.start();
+            try { await video.play(); } catch(e) { alert("Please click the page to enable audio!"); }
+            
+            function exportDraw() { 
+                if(video.paused || video.ended) return; 
+                renderFrame(); 
+                requestAnimationFrame(exportDraw); 
+            }
+            exportDraw();
+        }
+    </script>
+</body>
+</html>

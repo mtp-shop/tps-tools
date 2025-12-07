@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | STREAM RIPPER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg: #050505;
+            --panel: #111;
+            --border: #222;
+            --accent: #ff0099; /* Neon Pink */
+            --accent-hover: #d60080;
+            --text-main: #fff;
+            --text-muted: #888;
+            --success: #00ff9d;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh; width: 100vw; overflow: hidden;
+            display: flex; flex-direction: column;
+            background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: -1; pointer-events: none; opacity: 0.5;
+        }
+
+        /* --- NAV --- */
+        .nav-bar {
+            height: 70px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.9);
+            backdrop-filter: blur(10px); z-index: 100;
+        }
+        .logo { font-family: 'Rajdhani'; font-weight: 700; font-size: 1.5rem; letter-spacing: 2px; }
+        .logo span { color: var(--accent); }
+        .back-btn {
+            text-decoration: none; color: #666; font-size: 0.8rem; font-weight: 700; 
+            border: 1px solid #333; padding: 8px 20px; transition: 0.2s;
+        }
+        .back-btn:hover { border-color: white; color: white; }
+
+        /* --- MAIN CONTENT --- */
+        .container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding-top: 8vh; width: 100%; max-width: 900px; margin: 0 auto;
+        }
+
+        .hero-text {
+            text-align: center; margin-bottom: 40px;
+        }
+        h1 { font-family: 'Rajdhani'; font-weight: 700; font-size: 3rem; margin-bottom: 10px; }
+        h1 span { color: var(--accent); }
+        p { color: var(--text-muted); font-size: 1rem; }
+
+        /* --- CONTROL BOX --- */
+        .control-box {
+            width: 100%; background: var(--panel); border: 2px solid var(--accent);
+            border-radius: 8px; padding: 10px; display: flex; gap: 10px;
+            box-shadow: 0 0 30px rgba(255, 0, 153, 0.1);
+            position: relative; min-height: 100px; align-items: center; justify-content: center;
+        }
+        
+        .mode-toggle {
+            display: flex; gap: 5px; position: absolute; top: -35px; left: 0;
+        }
+        .mode-btn {
+            background: #111; color: #666; border: 1px solid #333; padding: 5px 15px;
+            font-size: 0.7rem; cursor: pointer; font-family: 'Rajdhani'; font-weight: 700;
+            border-radius: 4px 4px 0 0; transition: 0.2s;
+        }
+        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* --- UI ELEMENTS --- */
+        
+        /* 1. LOCAL FILE UI */
+        .file-upload-overlay {
+            width: 100%; height: 100%; padding: 30px;
+            background: var(--panel); display: flex;
+            align-items: center; justify-content: center; cursor: pointer;
+        }
+        .file-upload-overlay:hover { background: #1a1a1a; }
+        
+        /* 2. EXTERNAL URL UI */
+        .url-launch-ui {
+            width: 100%; height: 100%; display: none; padding: 20px;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .action-btn {
+            background: var(--accent); color: white; border: none; padding: 15px 50px;
+            font-family: 'Rajdhani'; font-weight: 700; font-size: 1.2rem; cursor: pointer;
+            border-radius: 4px; display: flex; align-items: center; gap: 10px;
+            transition: 0.2s; white-space: nowrap; width: 100%; justify-content: center;
+        }
+        .action-btn:hover { background: var(--accent-hover); box-shadow: 0 0 30px var(--accent); transform: scale(1.02); }
+        .action-btn i { font-size: 1rem; }
+
+        /* --- RESULTS TABLE --- */
+        .results-area {
+            width: 100%; margin-top: 40px; background: var(--panel); border: 1px solid var(--border);
+            border-radius: 8px; overflow: hidden; display: none; animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .media-info {
+            display: flex; gap: 20px; padding: 20px; border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .thumb-box {
+            width: 160px; height: 90px; background: #000; border-radius: 4px; overflow: hidden;
+            display: flex; justify-content: center; align-items: center; border: 1px solid #333;
+        }
+        .thumb-box img, .thumb-box video { width: 100%; height: 100%; object-fit: cover; }
+        
+        .meta-box h3 { font-family: 'Inter'; font-size: 1.2rem; margin-bottom: 5px; color: white; }
+        .meta-box div { font-size: 0.8rem; color: #666; }
+
+        /* TABS */
+        .format-tabs { display: flex; background: #0a0a0a; border-bottom: 1px solid var(--border); }
+        .tab {
+            flex: 1; text-align: center; padding: 15px; cursor: pointer; color: #666; font-weight: 600; font-size: 0.9rem;
+            transition: 0.2s; border-bottom: 2px solid transparent;
+        }
+        .tab:hover { color: white; background: #111; }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: #111; }
+
+        /* LIST */
+        .format-list { padding: 0; }
+        .format-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 30px; border-bottom: 1px solid #1a1a1a; transition: 0.1s;
+        }
+        .format-row:last-child { border-bottom: none; }
+        .format-row:hover { background: #161616; }
+
+        .fmt-type { width: 100px; font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; }
+        .fmt-size { width: 100px; color: #666; font-size: 0.9rem; }
+        .fmt-res  { width: 100px; color: var(--accent); font-weight: 700; font-size: 0.8rem; background: rgba(255,0,153,0.1); padding: 4px 8px; border-radius: 4px; text-align: center;}
+        
+        .dl-btn {
+            background: var(--success); color: black; border: none; padding: 8px 25px;
+            font-family: 'Rajdhani'; font-weight: 700; border-radius: 4px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .dl-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0,255,157,0.3); }
+
+        /* HIDDEN PROCESSING */
+        #hidden-video { display: none; }
+        .progress-bar { width: 100%; height: 4px; background: #111; display: none; position: relative; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
+        .processing-txt { position: absolute; top: -20px; right: 0; color: var(--accent); font-size: 0.7rem; font-weight: 700; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <div class="nav-bar">
+        <div class="logo">STREAM <span>RIPPER</span></div>
+        <a href="index.html" class="back-btn">RETURN TO SYSTEM</a>
+    </div>
+
+    <div class="container">
+        
+        <div class="hero-text">
+            <h1>CONVERT VIDEO TO <span>MP3 & MP4</span></h1>
+            <p>Download directly from YouTube or convert local files.</p>
+        </div>
+
+        <div style="position: relative; width: 100%;">
+            <div class="mode-toggle">
+                <div class="mode-btn active" id="mode-local" onclick="setMode('local')">LOCAL FILE</div>
+                <div class="mode-btn" id="mode-url" onclick="setMode('url')">EXTERNAL URL</div>
+            </div>
+
+            <div class="control-box">
+                <!-- LOCAL UPLOAD UI -->
+                <div class="file-upload-overlay" id="drop-zone" onclick="document.getElementById('inp-file').click()">
+                    <input type="file" id="inp-file" style="display:none" accept="video/*,audio/*">
+                    <span style="color:#888; font-weight:600;"><i class="fa-solid fa-file-import" style="margin-right:10px;"></i> Drop Video File or Click to Upload</span>
+                </div>
+
+                <!-- URL DIRECT BUTTON -->
+                <div class="url-launch-ui" id="url-zone">
+                    <button class="action-btn" onclick="openY2Mate()">
+                        OPEN CONVERTER <i class="fa-solid fa-external-link-alt"></i>
+                    </button>
+                    <div style="font-size: 0.7rem; color: #555; margin-top: 10px;">Opens external downloader (y2mate)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS TABLE (LOCAL ONLY) -->
+        <div class="results-area" id="results">
+            <!-- Media Metadata -->
+            <div class="media-info">
+                <div class="thumb-box" id="thumb-box"></div>
+                <div class="meta-box">
+                    <h3 id="meta-title">Video Title</h3>
+                    <div id="meta-dur">Duration: 00:00</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="format-tabs">
+                <div class="tab active" onclick="switchTab('video')">Video (MP4)</div>
+                <div class="tab" onclick="switchTab('audio')">Audio (MP3)</div>
+            </div>
+
+            <!-- List -->
+            <div class="format-list" id="list-video"></div>
+            <div class="format-list" id="list-audio" style="display:none;"></div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar" id="progress-bar">
+                <div class="processing-txt" id="proc-txt">CONVERTING...</div>
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Hidden Processing Elements -->
+    <video id="hidden-video" crossorigin="anonymous"></video>
+    <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+    <script>
+        let currentFile = null;
+        let mode = 'local';
+        const video = document.getElementById('hidden-video');
+
+        // --- MODE SWITCHING ---
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('mode-'+m).classList.add('active');
+
+            if(m === 'local') {
+                document.getElementById('drop-zone').style.display = 'flex';
+                document.getElementById('url-zone').style.display = 'none';
+            } else {
+                document.getElementById('drop-zone').style.display = 'none';
+                document.getElementById('url-zone').style.display = 'flex';
+            }
+            document.getElementById('results').style.display = 'none';
+        }
+
+        // --- EXTERNAL LAUNCH ---
+        function openY2Mate() {
+             const target = "https://y2mate.net.co/1";
+             window.open(target, 'Y2Mate_Downloader', 'width=1000,height=800,scrollbars=yes,resizable=yes');
+        }
+
+        function switchTab(type) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('list-video').style.display = type==='video' ? 'block' : 'none';
+            document.getElementById('list-audio').style.display = type==='audio' ? 'block' : 'none';
+        }
+
+        // --- FILE HANDLING ---
+        document.getElementById('inp-file').addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                currentFile = e.target.files[0];
+                analyzeFile(currentFile);
+            }
+        });
+
+        function analyzeFile(file) {
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            
+            video.onloadedmetadata = () => {
+                document.getElementById('results').style.display = 'block';
+                document.getElementById('thumb-box').innerHTML = '<video src="'+url+'" muted style="width:100%; height:100%; object-fit:cover;"></video>';
+                
+                document.getElementById('meta-title').innerText = file.name;
+                const m = Math.floor(video.duration/60);
+                const s = Math.floor(video.duration%60);
+                document.getElementById('meta-dur').innerText = `Duration: ${m}:${s.toString().padStart(2,'0')} | Size: ${(file.size/1024/1024).toFixed(1)} MB`;
+
+                generateDownloadOptions();
+            };
+        }
+
+        function generateDownloadOptions() {
+            const vidList = document.getElementById('list-video');
+            const audList = document.getElementById('list-audio');
+            
+            // Video Options
+            vidList.innerHTML = `
+                <div class="format-row">
+                    <div class="fmt-res">1080p</div>
+                    <div class="fmt-type">.mp4</div>
+                    <div class="fmt-size">Original</div>
+                    <button class="dl-btn" onclick="downloadDirect()">
+                        <i class="fa-solid fa-download"></i> Download
+                    </button>
+                </div>
+                <div class="format-row">
+                    <div class="fmt-res">720p</div>
+                    <div class="fmt-type">.mp4 (Lite)</div>
+                    <div class="fmt-size">~${(currentFile.size*0.7/1024/1024).toFixed(1)} MB</div>
+                    <button class="dl-btn" onclick="convert('video', 0.7)">
+                        <i class="fa-solid fa-gear"></i> Convert
+                    </button>
+                </div>
+            `;
+
+            // Audio Options
+            audList.innerHTML = `
+                <div class="format-row">
+                    <div class="fmt-res" style="background:rgba(0,255,157,0.1); color:#00ff9d;">128kbps</div>
+                    <div class="fmt-type"><i class="fa-solid fa-music"></i> .mp3</div>
+                    <div class="fmt-size">~${(video.duration * 128 * 1024 / 8 / 1024 / 1024).toFixed(1)} MB</div>
+                    <button class="dl-btn" onclick="convert('audio', 1)">
+                        <i class="fa-solid fa-gear"></i> Convert
+                    </button>
+                </div>
+            `;
+        }
+
+        function downloadDirect() {
+            const a = document.createElement('a');
+            a.href = video.src;
+            a.download = currentFile.name;
+            a.click();
+        }
+
+        // --- CONVERTER ENGINE (Client Side) ---
+        async function convert(type, quality) {
+            const bar = document.getElementById('progress-bar');
+            const fill = document.getElementById('progress-fill');
+            const txt = document.getElementById('proc-txt');
+            
+            bar.style.display = 'block';
+            fill.style.width = '0%';
+            
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const dest = audioCtx.createMediaStreamDestination();
+            const source = audioCtx.createMediaElementSource(video);
+            source.connect(dest); 
+
+            let stream;
+            let options;
+            
+            if(type === 'video') {
+                txt.innerText = "RENDERING VIDEO...";
+                const canvas = document.getElementById('hidden-canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth * 0.75; 
+                canvas.height = video.videoHeight * 0.75;
+                
+                stream = canvas.captureStream(30);
+                if(dest.stream.getAudioTracks().length > 0) stream.addTrack(dest.stream.getAudioTracks()[0]);
+                options = { mimeType: 'video/webm; codecs=vp9', videoBitsPerSecond: 2500000 };
+                
+                video.currentTime = 0;
+                video.play();
+                const loop = () => {
+                    if(!video.paused && !video.ended) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(loop);
+                    }
+                }
+                loop();
+            } else {
+                txt.innerText = "EXTRACTING AUDIO...";
+                stream = dest.stream;
+                options = { mimeType: 'audio/webm; codecs=opus', audioBitsPerSecond: 128000 };
+                video.currentTime = 0;
+                video.play();
+            }
+
+            const recorder = new MediaRecorder(stream, options);
+            const chunks = [];
+            
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: type==='video'?'video/webm':'audio/webm' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = type==='video' ? 'converted.webm' : 'extracted_audio.webm';
+                a.click();
+                bar.style.display = 'none';
+                audioCtx.close();
+            };
+
+            recorder.start();
+
+            // Progress Loop
+            const check = setInterval(() => {
+                const pct = (video.currentTime / video.duration) * 100;
+                fill.style.width = pct + '%';
+                if(video.ended) {
+                    clearInterval(check);
+                    recorder.stop();
+                }
+            }, 100);
+        }
+
+    </script>
+</body>
+</html>

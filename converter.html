@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | FORMAT SHIFTER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg: #020202;
+            --panel: #080808;
+            --border: #1a1a1a;
+            --accent: #00e5ff;
+            --text-main: #e0e0e0;
+            --text-muted: #555;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* FX */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: -1; pointer-events: none;
+        }
+
+        /* APP LAYOUT */
+        .exit-btn {
+            position: absolute; top: 30px; right: 30px; z-index: 500;
+            background: black; padding: 10px 20px; border: 1px solid #333;
+            color: #666; font-family: 'Rajdhani'; font-weight: 700; cursor: pointer;
+            border-radius: 4px; transition: 0.2s; font-size: 0.8rem; text-decoration: none;
+        }
+        .exit-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        .toolbar {
+            position: absolute; top: 30px; left: 30px; width: 340px;
+            background: rgba(8, 8, 8, 0.95); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); padding: 30px;
+            border-radius: 4px; z-index: 500;
+            display: flex; flex-direction: column; gap: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        
+        .tool-header {
+            font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 1px; font-size: 1.2rem;
+            border-bottom: 1px solid #222; padding-bottom: 15px; margin-bottom: 5px;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .status-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
+
+        .control-label {
+            font-size: 0.7rem; color: #666; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; margin-top: 10px;
+        }
+
+        /* Inputs */
+        input[type="file"] { display: none; }
+        .file-upload {
+            border: 1px dashed #333; padding: 15px; text-align: center; border-radius: 4px;
+            cursor: pointer; transition: 0.2s; color: #555; font-size: 0.8rem; font-weight: 600;
+            display: block; width: 100%; background: #0c0c0c;
+        }
+        .file-upload:hover { border-color: var(--accent); color: var(--accent); }
+
+        select {
+            width: 100%; background: #0c0c0c; border: 1px solid #333; color: white;
+            padding: 15px; font-family: 'Inter'; border-radius: 4px; outline: none;
+        }
+        select:focus { border-color: var(--accent); }
+
+        input[type="range"] {
+            width: 100%; height: 2px; background: #333; border-radius: 2px; appearance: none; cursor: pointer; display: block;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 12px; height: 12px; background: var(--accent); border-radius: 0;
+            cursor: pointer; border: 2px solid black;
+        }
+
+        .toggle-row { display: flex; gap: 10px; }
+        .toggle-btn {
+            flex: 1; background: #0c0c0c; border: 1px solid #333; color: #555; padding: 10px;
+            font-size: 0.7rem; text-transform: uppercase; cursor: pointer; font-family: 'Rajdhani'; font-weight: 700;
+        }
+        .toggle-btn.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        /* Action Button */
+        .btn-action {
+            background: var(--text-main); color: black; border: none; padding: 15px;
+            font-family: 'Rajdhani'; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: 0.2s; width: 100%; margin-top: 20px;
+        }
+        .btn-action:hover { background: var(--accent); }
+
+        /* Canvas Area */
+        .canvas-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-image: radial-gradient(#111 1px, transparent 1px);
+            background-size: 40px 40px; z-index: 1; padding: 80px 80px 80px 400px;
+        }
+        canvas { 
+            max-width: 100%; max-height: 100%; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); 
+            border: 1px solid #222;
+            background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        /* Dynamic Options */
+        .opt-group { display: none; }
+        .opt-group.active { display: block; }
+        .info-text { font-size: 0.75rem; color: #444; margin-top: 10px; line-height: 1.4; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <!-- MAIN APP -->
+    <a href="index.html" class="exit-btn">RETURN TO SYSTEM</a>
+
+    <div class="toolbar">
+        <div class="tool-header">FORMAT SHIFTER <div class="status-dot"></div></div>
+        
+        <!-- STEP 1 -->
+        <div>
+            <div class="control-label">01 // Source File</div>
+            <input type="file" id="inp-file" accept="image/png, image/jpeg, image/webp">
+            <label class="file-upload" for="inp-file" id="lbl-file">Select File</label>
+        </div>
+
+        <!-- STEP 2 -->
+        <div>
+            <div class="control-label">02 // Target Format</div>
+            <select id="sel-format" onchange="updateUI()">
+                <option value="jpeg">JPG / JPEG (Standard)</option>
+                <option value="webp">WEBP (High Efficiency)</option>
+                <option value="svg">SVG (Web Vector)</option>
+                <option value="ico">ICO (Favicon)</option>
+            </select>
+        </div>
+
+        <!-- STEP 3: DYNAMIC SETTINGS -->
+        
+        <!-- Quality Slider (JPG/WEBP) -->
+        <div id="opt-quality" class="opt-group active">
+            <div class="control-label" style="display:flex; justify-content:space-between;">
+                <span>Quality</span> <span id="val-qual">90%</span>
+            </div>
+            <input type="range" id="rng-qual" min="0.1" max="1.0" step="0.1" value="0.9">
+        </div>
+
+        <!-- Background Color (JPG Only) -->
+        <div id="opt-bg" class="opt-group active">
+            <div class="control-label">Matte Color</div>
+            <div class="toggle-row">
+                <button class="toggle-btn active" id="bg-black" onclick="setBg('black')">BLACK</button>
+                <button class="toggle-btn" id="bg-white" onclick="setBg('white')">WHITE</button>
+            </div>
+        </div>
+
+        <!-- Size Select (ICO Only) -->
+        <div id="opt-size" class="opt-group">
+            <div class="control-label">Icon Size</div>
+            <select id="sel-size">
+                <option value="32">32 x 32 (Standard)</option>
+                <option value="64">64 x 64 (HD)</option>
+                <option value="128">128 x 128 (Large)</option>
+            </select>
+        </div>
+
+        <!-- SVG Info (SVG Only) -->
+        <div id="opt-svg" class="opt-group">
+             <div class="info-text">
+                Creates an SVG container with your image embedded. Preserves transparency.
+             </div>
+        </div>
+
+        <button class="btn-action" onclick="downloadResult()">CONVERT FILE</button>
+    </div>
+
+    <div class="canvas-wrapper">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let srcImg = new Image();
+        let isLoaded = false;
+        let bgColor = 'black'; 
+        
+        // 1. Handle File Upload
+        document.getElementById('inp-file').addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if(!f) return;
+            
+            document.getElementById('lbl-file').innerText = f.name.substring(0,20);
+            
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                srcImg.onload = () => {
+                    isLoaded = true;
+                    render();
+                };
+                srcImg.src = ev.target.result;
+            }
+            reader.readAsDataURL(f);
+        });
+
+        // 2. UI Updates
+        const rngQual = document.getElementById('rng-qual');
+        rngQual.addEventListener('input', () => {
+            document.getElementById('val-qual').innerText = Math.round(rngQual.value * 100) + '%';
+            render();
+        });
+
+        document.getElementById('sel-size').addEventListener('change', render);
+
+        function setBg(color) {
+            bgColor = color;
+            document.getElementById('bg-black').className = color === 'black' ? 'toggle-btn active' : 'toggle-btn';
+            document.getElementById('bg-white').className = color === 'white' ? 'toggle-btn active' : 'toggle-btn';
+            render();
+        }
+
+        function updateUI() {
+            const fmt = document.getElementById('sel-format').value;
+            
+            // Hide all first
+            document.querySelectorAll('.opt-group').forEach(el => el.classList.remove('active'));
+
+            if (fmt === 'jpeg') {
+                document.getElementById('opt-quality').classList.add('active');
+                document.getElementById('opt-bg').classList.add('active');
+            } else if (fmt === 'webp') {
+                document.getElementById('opt-quality').classList.add('active');
+            } else if (fmt === 'ico') {
+                document.getElementById('opt-size').classList.add('active');
+            } else if (fmt === 'svg') {
+                document.getElementById('opt-svg').classList.add('active');
+            }
+            render();
+        }
+
+        // 3. Render Canvas
+        function render() {
+            if (!isLoaded) return;
+
+            const fmt = document.getElementById('sel-format').value;
+            let w = srcImg.width;
+            let h = srcImg.height;
+
+            // Handle Resizing for ICO
+            if (fmt === 'ico') {
+                const s = parseInt(document.getElementById('sel-size').value);
+                w = s; h = s; 
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+
+            // Background Fill Logic
+            if (fmt === 'jpeg' || (fmt === 'ico' && bgColor !== 'transparent' && fmt !== 'ico')) {
+                // Keep bg logic for JPG primarily
+                if(fmt === 'jpeg') {
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(0, 0, w, h);
+                } else {
+                    ctx.clearRect(0,0,w,h);
+                }
+            } else {
+                ctx.clearRect(0, 0, w, h);
+            }
+
+            // Draw Image
+            ctx.drawImage(srcImg, 0, 0, w, h);
+        }
+
+        // 4. Download Logic
+        function downloadResult() {
+            if(!isLoaded) return alert("Please select a file first.");
+            
+            const fmt = document.getElementById('sel-format').value;
+            const qual = parseFloat(document.getElementById('rng-qual').value);
+            
+            // Handle SVG Separately (Text based construction)
+            if(fmt === 'svg') {
+                // Get PNG data from canvas to preserve exact pixel data + transparency
+                const imgData = canvas.toDataURL('image/png');
+                const w = canvas.width;
+                const h = canvas.height;
+                
+                // Construct simple SVG wrapper
+                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+                    <image href="${imgData}" width="${w}" height="${h}" />
+                </svg>`;
+                
+                const blob = new Blob([svgString], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "converted.svg";
+                a.click();
+                return;
+            }
+
+            // Handle Raster Formats
+            let mimeType = 'image/png';
+            let ext = 'png';
+
+            if(fmt === 'jpeg') { mimeType = 'image/jpeg'; ext = 'jpg'; }
+            if(fmt === 'webp') { mimeType = 'image/webp'; ext = 'webp'; }
+            if(fmt === 'ico')  { mimeType = 'image/png';  ext = 'ico'; } 
+
+            const dataUrl = canvas.toDataURL(mimeType, qual);
+            
+            const link = document.createElement('a');
+            link.download = `converted_file.${ext}`;
+            link.href = dataUrl;
+            link.click();
+        }
+    </script>
+</body>
+</html>

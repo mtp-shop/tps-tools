@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS STUDIOS | PIXEL SCALE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600&display=swap');
+
+        :root {
+            --bg: #020202;
+            --panel: #080808;
+            --border: #1a1a1a;
+            --accent: #39ff14; /* Neon Green */
+            --text-main: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; z-index: -1; pointer-events: none;
+        }
+
+        .exit-btn {
+            position: absolute; top: 30px; right: 30px; z-index: 500;
+            background: black; padding: 10px 20px; border: 1px solid #333;
+            color: #666; font-family: 'Rajdhani'; font-weight: 700; cursor: pointer;
+            border-radius: 4px; transition: 0.2s; font-size: 0.8rem; text-decoration: none;
+        }
+        .exit-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* TOOLBAR */
+        .toolbar {
+            position: absolute; top: 30px; left: 30px; width: 340px;
+            background: rgba(8, 8, 8, 0.95); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); padding: 30px;
+            border-radius: 4px; z-index: 500;
+            display: flex; flex-direction: column; gap: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        
+        .tool-header {
+            font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 1px; font-size: 1.2rem;
+            border-bottom: 1px solid #222; padding-bottom: 15px; margin-bottom: 5px;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .status-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
+
+        .control-label {
+            font-size: 0.7rem; color: #666; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; margin-top: 10px;
+        }
+
+        /* UPLOAD */
+        input[type="file"] { display: none; }
+        .file-upload {
+            border: 1px dashed #333; padding: 20px; text-align: center; border-radius: 4px;
+            cursor: pointer; transition: 0.2s; color: #555; font-size: 0.8rem; font-weight: 600;
+            display: block; width: 100%; background: #0c0c0c;
+        }
+        .file-upload:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* DIMENSION INPUTS */
+        .dim-row { display: flex; gap: 10px; align-items: center; }
+        .dim-group { flex: 1; }
+        .dim-group input {
+            width: 100%; background: #111; border: 1px solid #333; color: white;
+            padding: 10px; font-family: 'Rajdhani'; font-weight: 700; text-align: center;
+        }
+        .dim-group input:focus { border-color: var(--accent); }
+        .link-btn {
+            width: 30px; height: 30px; display: flex; justify-content: center; align-items: center;
+            background: #111; border: 1px solid #333; color: #444; cursor: pointer; transition: 0.2s;
+        }
+        .link-btn.active { color: var(--accent); border-color: var(--accent); background: #0a1a0a; }
+
+        /* PRESETS */
+        .preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
+        .preset-btn {
+            background: #111; border: 1px solid #222; color: #666; padding: 8px;
+            font-size: 0.7rem; cursor: pointer; font-family: 'Rajdhani'; transition: 0.2s;
+        }
+        .preset-btn:hover { color: white; border-color: #444; }
+
+        /* TOGGLES */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+        .toggle-label { font-size: 0.75rem; color: #888; }
+        input[type="checkbox"] { accent-color: var(--accent); }
+
+        .btn-action {
+            background: var(--text-main); color: black; border: none; padding: 15px;
+            font-family: 'Rajdhani'; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: 0.2s; width: 100%; margin-top: 20px;
+        }
+        .btn-action:hover { background: var(--accent); }
+
+        /* CANVAS AREA */
+        .canvas-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-image: radial-gradient(#111 1px, transparent 1px);
+            background-size: 40px 40px; z-index: 1; padding: 80px 80px 80px 400px;
+            overflow: hidden;
+        }
+        
+        .canvas-container {
+            max-width: 90%; max-height: 90%;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border: 1px solid #333;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABpJREFUOE9jYO/q+s9AAWD6//9/IqCW4TBAAQA7dwoB/01O9QAAAABJRU5ErkJggg=='); /* Checkerboard */
+            display: flex;
+        }
+        
+        canvas { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; }
+
+        /* INFO OVERLAY */
+        .dim-info {
+            position: absolute; bottom: 30px; right: 30px;
+            background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 10px 20px;
+            font-family: 'Rajdhani'; color: white; z-index: 100; font-size: 0.9rem;
+            display: none;
+        }
+        .dim-info span { color: var(--accent); font-weight: 700; margin-left: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <a href="index.html" class="exit-btn">RETURN TO SYSTEM</a>
+
+    <div class="toolbar">
+        <div class="tool-header">PIXEL SCALE <div class="status-dot"></div></div>
+
+        <!-- UPLOAD -->
+        <div>
+            <div class="control-label">01 // Source Image</div>
+            <input type="file" id="inp-file" accept="image/*">
+            <label class="file-upload" for="inp-file" id="lbl-file">Select Image</label>
+        </div>
+
+        <!-- CONTROLS (Hidden until load) -->
+        <div id="controls" style="display:none;">
+            
+            <div class="control-label">02 // Dimensions (PX)</div>
+            <div class="dim-row">
+                <div class="dim-group">
+                    <input type="number" id="inp-w" value="0">
+                    <div style="font-size:0.6rem; color:#444; text-align:center; margin-top:2px;">WIDTH</div>
+                </div>
+                
+                <button class="link-btn active" id="btn-link" onclick="toggleLink()" title="Lock Aspect Ratio">
+                    <i class="fa-solid fa-link"></i>
+                </button>
+
+                <div class="dim-group">
+                    <input type="number" id="inp-h" value="0">
+                    <div style="font-size:0.6rem; color:#444; text-align:center; margin-top:2px;">HEIGHT</div>
+                </div>
+            </div>
+
+            <div class="control-label">Presets</div>
+            <div class="preset-grid">
+                <button class="preset-btn" onclick="scalePct(0.25)">25%</button>
+                <button class="preset-btn" onclick="scalePct(0.50)">50%</button>
+                <button class="preset-btn" onclick="scalePct(0.75)">75%</button>
+                <button class="preset-btn" onclick="scalePct(1.5)">150%</button>
+                <button class="preset-btn" onclick="scalePct(2.0)">200%</button>
+                <button class="preset-btn" onclick="resetDim()">RESET</button>
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid #222; padding-top: 10px;">
+                <div class="toggle-row">
+                    <span class="toggle-label">Pixel Art Mode (Hard Edges)</span>
+                    <input type="checkbox" id="chk-pixel" onchange="render()">
+                </div>
+            </div>
+
+            <button class="btn-action" onclick="downloadImage()">EXPORT IMAGE</button>
+        </div>
+    </div>
+
+    <div class="canvas-wrapper">
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <div class="dim-info" id="dim-info">
+        ORIGINAL: <span id="info-orig">0 x 0</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp; 
+        NEW: <span id="info-new">0 x 0</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let srcImg = new Image();
+        let isLoaded = false;
+        let originalW = 0, originalH = 0;
+        let aspectRatio = 1;
+        let isLinked = true;
+
+        // UI Elements
+        const inpW = document.getElementById('inp-w');
+        const inpH = document.getElementById('inp-h');
+        const btnLink = document.getElementById('btn-link');
+        const chkPixel = document.getElementById('chk-pixel');
+
+        // 1. UPLOAD
+        document.getElementById('inp-file').addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            if(!f) return;
+            document.getElementById('lbl-file').innerText = f.name.substring(0, 20);
+            
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                srcImg.onload = () => {
+                    isLoaded = true;
+                    originalW = srcImg.width;
+                    originalH = srcImg.height;
+                    aspectRatio = originalW / originalH;
+                    
+                    // Show UI
+                    document.getElementById('controls').style.display = 'block';
+                    document.getElementById('dim-info').style.display = 'block';
+                    document.getElementById('info-orig').innerText = `${originalW} x ${originalH}`;
+                    
+                    resetDim();
+                };
+                srcImg.src = ev.target.result;
+            };
+            reader.readAsDataURL(f);
+        });
+
+        // 2. INPUT HANDLERS
+        function toggleLink() {
+            isLinked = !isLinked;
+            btnLink.className = isLinked ? 'link-btn active' : 'link-btn';
+            btnLink.innerHTML = isLinked ? '<i class="fa-solid fa-link"></i>' : '<i class="fa-solid fa-link-slash"></i>';
+        }
+
+        inpW.addEventListener('input', () => {
+            if(isLinked && isLoaded) inpH.value = Math.round(inpW.value / aspectRatio);
+            render();
+        });
+
+        inpH.addEventListener('input', () => {
+            if(isLinked && isLoaded) inpW.value = Math.round(inpH.value * aspectRatio);
+            render();
+        });
+
+        // 3. PRESET FUNCTIONS
+        function scalePct(pct) {
+            if(!isLoaded) return;
+            inpW.value = Math.round(originalW * pct);
+            inpH.value = Math.round(originalH * pct);
+            render();
+        }
+
+        function resetDim() {
+            if(!isLoaded) return;
+            inpW.value = originalW;
+            inpH.value = originalH;
+            render();
+        }
+
+        // 4. RENDER ENGINE
+        function render() {
+            if(!isLoaded) return;
+            
+            const w = parseInt(inpW.value) || 1;
+            const h = parseInt(inpH.value) || 1;
+
+            canvas.width = w;
+            canvas.height = h;
+
+            // Update Info
+            document.getElementById('info-new').innerText = `${w} x ${h}`;
+
+            // Image Smoothing Logic
+            ctx.imageSmoothingEnabled = !chkPixel.checked;
+            if(!chkPixel.checked) ctx.imageSmoothingQuality = 'high';
+
+            ctx.drawImage(srcImg, 0, 0, w, h);
+        }
+
+        // 5. EXPORT
+        function downloadImage() {
+            if(!isLoaded) return;
+            const a = document.createElement('a');
+            a.download = `resized_${inpW.value}x${inpH.value}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+        }
+
+    </script>
+</body>
+</html>
