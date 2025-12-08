@@ -1,3 +1,5 @@
+<!-- START OF FILE compressor.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -197,10 +199,11 @@
 
     <!-- MAIN VIEW -->
     <div class="center-stage">
-        <div class="preview-container">
+        <div class="preview-container" id="media-container">
+            <!-- Media Elements will be injected here via JS to ensure clean state -->
             <div class="processing-badge" id="badge-process">PROCESSING... <span id="pct-process">0%</span></div>
             
-            <video id="vid-preview" playsinline></video>
+            <video id="vid-preview" playsinline muted style="display:none"></video>
             <audio id="aud-preview" controls style="display:none; width: 300px;"></audio>
             <img id="img-preview" style="display:none;">
 
@@ -215,20 +218,20 @@
     </div>
 
     <script>
-        // --- WORKER BLOB FOR GIF.JS (Embedded to keep single file) ---
+        // --- WORKER BLOB FOR GIF.JS ---
         const gifWorkerBlob = new Blob([`
             importScripts('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
         `], { type: 'application/javascript' });
         const workerUrl = URL.createObjectURL(gifWorkerBlob);
-        // -------------------------------------------------------------
-
+        
         // DOM ELEMENTS
         const inpFile = document.getElementById('inp-file');
         const lblFile = document.getElementById('lbl-file');
         const fileMeta = document.getElementById('file-meta');
-        const vidPreview = document.getElementById('vid-preview');
-        const audPreview = document.getElementById('aud-preview');
-        const imgPreview = document.getElementById('img-preview');
+        let vidPreview = document.getElementById('vid-preview');
+        let audPreview = document.getElementById('aud-preview');
+        let imgPreview = document.getElementById('img-preview');
+        const mediaContainer = document.getElementById('media-container');
         const hiddenCanvas = document.getElementById('hidden-canvas');
         const ctx = hiddenCanvas.getContext('2d');
         const btnStart = document.getElementById('btn-start');
@@ -241,10 +244,11 @@
 
         // STATE
         let sourceFile = null;
-        let mediaType = null; // 'video', 'audio', 'gif'
+        let mediaType = null;
         let processedBlob = null;
         let originalSize = 0;
         let mediaDuration = 0;
+        let animationId = null; // To cancel loops
 
         // 1. FILE HANDLING
         inpFile.addEventListener('change', (e) => {
@@ -260,22 +264,66 @@
             if(e.dataTransfer.files[0]) loadMedia(e.dataTransfer.files[0]);
         });
 
+        // HELPER: Recreate DOM elements to fix "Source already connected" audio bug
+        function resetMediaElements() {
+            // Remove old elements
+            if(vidPreview) vidPreview.remove();
+            if(audPreview) audPreview.remove();
+            if(imgPreview) imgPreview.remove();
+
+            // Create fresh Video
+            vidPreview = document.createElement('video');
+            vidPreview.id = 'vid-preview';
+            vidPreview.playsInline = true;
+            vidPreview.muted = true;
+            vidPreview.style.display = 'none';
+            vidPreview.style.maxWidth = '100%';
+            vidPreview.style.maxHeight = '100%';
+            mediaContainer.insertBefore(vidPreview, hiddenCanvas);
+
+            // Create fresh Audio
+            audPreview = document.createElement('audio');
+            audPreview.id = 'aud-preview';
+            audPreview.controls = true;
+            audPreview.style.display = 'none';
+            audPreview.style.width = '300px';
+            mediaContainer.insertBefore(audPreview, hiddenCanvas);
+
+            // Create fresh Img
+            imgPreview = document.createElement('img');
+            imgPreview.id = 'img-preview';
+            imgPreview.style.display = 'none';
+            imgPreview.style.maxWidth = '100%';
+            imgPreview.style.maxHeight = '100%';
+            mediaContainer.insertBefore(imgPreview, hiddenCanvas);
+        }
+
         function loadMedia(f) {
+            // STOP any running animation loop
+            if(animationId) cancelAnimationFrame(animationId);
+
+            // FRESH DOM
+            resetMediaElements();
+
+            // RESET STATE
+            btnStart.innerText = "INITIALIZE CRUSH";
+            btnStart.disabled = false;
+            resultsPanel.style.display = 'none';
+            badge.style.display = 'none';
+            progFill.style.width = '0%';
+            processedBlob = null;
+            document.getElementById('video-options').style.display = 'none';
+            document.getElementById('gif-options').style.display = 'none';
+
             sourceFile = f;
             originalSize = f.size;
             const mb = (f.size / (1024*1024)).toFixed(2);
             fileMeta.innerText = `${f.name} (${mb} MB)`;
             fileMeta.style.color = "var(--accent)";
 
-            // Reset UI
-            vidPreview.style.display = 'none';
-            audPreview.style.display = 'none';
-            imgPreview.style.display = 'none';
-            document.getElementById('video-options').style.display = 'none';
-            document.getElementById('gif-options').style.display = 'none';
-
             const url = URL.createObjectURL(f);
 
+            // Handle Types
             if(f.type.startsWith('video')) {
                 mediaType = 'video';
                 vidPreview.style.display = 'block';
@@ -295,19 +343,11 @@
                 };
             } else if (f.type.includes('gif')) {
                 mediaType = 'gif';
-                vidPreview.style.display = 'block'; // We use video tag to play converted gif or canvas
-                // GIF workaround: Browser renders GIF in img tag, we draw to canvas
                 imgPreview.src = url; 
-                // We actually hide the img and show the video container for consistency
-                vidPreview.style.display = 'none';
                 imgPreview.style.display = 'block';
                 document.getElementById('video-options').style.display = 'block';
                 document.getElementById('gif-options').style.display = 'block';
-                // Estimate duration for GIF? Hard without parsing. Assume 5s or ask user. 
-                // We'll treat GIF as infinite loop until manually stopped or frame count.
-                // For simplicity, we will record 5 seconds of the GIF or try to parse duration? 
-                // Simpler: Just rely on size estimation.
-                mediaDuration = 10; // Placeholder
+                mediaDuration = 5; 
                 calcBitrate();
             } else {
                 alert("Unsupported Format."); return;
@@ -315,24 +355,26 @@
 
             settingsGroup.style.opacity = '1';
             settingsGroup.style.pointerEvents = 'all';
-            btnStart.disabled = false;
-            resultsPanel.style.display = 'none';
-            progFill.style.width = '0%';
         }
 
-        // 2. TARGET CALCULATION
+        // 2. AGGRESSIVE BITRATE CALCULATION (1.5x Multiplier)
         inpTarget.addEventListener('input', calcBitrate);
 
         function calcBitrate() {
-            if(!mediaDuration) return;
-            const targetMB = parseFloat(inpTarget.value);
-            const targetBits = targetMB * 8 * 1024 * 1024;
-            let bps = Math.floor(targetBits / mediaDuration);
+            if(!mediaDuration || mediaDuration === 0) return 2500000;
             
-            // Audio overhead (approx 128k)
-            if(mediaType === 'video') bps -= 128000;
-            
-            if(bps < 10000) bps = 10000; // Floor
+            const targetBits = parseFloat(inpTarget.value) * 8388608; 
+            const audioOverhead = mediaDuration * 128000;
+            let videoAvailableBits = targetBits - audioOverhead;
+            if(videoAvailableBits < 0) videoAvailableBits = targetBits * 0.5;
+
+            let rawBps = videoAvailableBits / mediaDuration;
+
+            // 1.5x Multiplier to fix browser undershoot
+            let bps = Math.floor(rawBps * 1.5);
+
+            if(bps > 500000000) bps = 500000000; 
+            if(bps < 50000) bps = 50000; 
             
             estBitrateLbl.innerText = `Target Bitrate: ${(bps/1000).toFixed(0)} kbps`;
             return bps;
@@ -356,28 +398,27 @@
             }
         }
 
-        // --- VIDEO ENGINE (Fixed Audio) ---
+        // --- VIDEO ENGINE ---
         function processVideo(bps, scale) {
-            // Setup Audio Routing
+            // 1. Setup Audio Context only when needed to prevent locks
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const dest = audioCtx.createMediaStreamDestination();
+            
+            // 2. Create source from FRESH video element
             const source = audioCtx.createMediaElementSource(vidPreview);
-            
-            // Connect Video Audio -> Stream Destination (Recorder hears it)
             source.connect(dest);
-            // Do NOT connect to audioCtx.destination (User does not hear it)
+            // Connect to speakers so user can hear (optional, but good)
+            // source.connect(audioCtx.destination); 
             
-            // Unmute video so source gets data
-            vidPreview.muted = false; 
+            vidPreview.muted = false; // Unmute so stream has audio
             vidPreview.volume = 1.0;
             vidPreview.currentTime = 0;
+            vidPreview.loop = false;
 
-            // Canvas Setup
             const w = vidPreview.videoWidth * scale;
             const h = vidPreview.videoHeight * scale;
             hiddenCanvas.width = w; hiddenCanvas.height = h;
 
-            // Stream Setup
             const canvasStream = hiddenCanvas.captureStream(30);
             if(dest.stream.getAudioTracks().length > 0) {
                 canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
@@ -385,7 +426,7 @@
 
             const recorder = new MediaRecorder(canvasStream, {
                 mimeType: 'video/webm; codecs=vp9',
-                videoBitsPerSecond: bps
+                videoBitsPerSecond: bps 
             });
 
             const chunks = [];
@@ -393,8 +434,12 @@
             recorder.onstop = () => {
                 const blob = new Blob(chunks, {type:'video/webm'});
                 finishProcess(blob);
+                
+                // Cleanup Audio
+                source.disconnect();
                 audioCtx.close();
-                vidPreview.muted = true; // Remute for safety
+                vidPreview.muted = true;
+                if(animationId) cancelAnimationFrame(animationId);
             };
 
             recorder.start();
@@ -406,7 +451,7 @@
                 const pct = ((vidPreview.currentTime / vidPreview.duration)*100).toFixed(1);
                 progFill.style.width = pct + '%';
                 document.getElementById('pct-process').innerText = pct + '%';
-                requestAnimationFrame(draw);
+                animationId = requestAnimationFrame(draw);
             }
             draw();
 
@@ -419,8 +464,9 @@
             const dest = audioCtx.createMediaStreamDestination();
             const source = audioCtx.createMediaElementSource(audPreview);
             source.connect(dest);
-            // Mute output
             
+            audPreview.loop = false;
+
             const recorder = new MediaRecorder(dest.stream, {
                 mimeType: 'audio/webm',
                 audioBitsPerSecond: bps
@@ -430,6 +476,7 @@
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = () => {
                 finishProcess(new Blob(chunks, {type:'audio/webm'}));
+                source.disconnect();
                 audioCtx.close();
             };
 
@@ -446,85 +493,75 @@
         }
 
         // --- GIF ENGINE ---
-        function processGif(bps, scale) {
+        async function processGif(bps, scale) {
+            if (!('ImageDecoder' in window)) {
+                alert("Browser not supported for GIF crush. Use Chrome/Edge.");
+                btnStart.disabled = false;
+                badge.style.display = 'none';
+                return;
+            }
+
             const isGifOut = document.getElementById('chk-gif-out').checked;
+            const stream = sourceFile.stream();
+            const decoder = new ImageDecoder({data: stream, type: 'image/gif'});
+            
+            await decoder.decode({frameIndex: 0});
+            const track = decoder.tracks.selectedTrack;
+            
             const w = imgPreview.naturalWidth * scale;
             const h = imgPreview.naturalHeight * scale;
             hiddenCanvas.width = w; hiddenCanvas.height = h;
-
-            // Strategy: Since we can't parse GIF frames easily without a heavy parser,
-            // we will 'record' the browser rendering the GIF to the canvas.
-            // This is "Screen Recording" the GIF element essentially.
             
-            if(!isGifOut) {
-                // GIF -> VIDEO (WebM)
-                // Much more efficient, handles transparency by black background usually
-                ctx.fillStyle = "#000";
-                
-                const stream = hiddenCanvas.captureStream(30);
-                const recorder = new MediaRecorder(stream, {
+            let gifEncoder = null;
+            let videoRecorder = null;
+            let videoChunks = [];
+
+            if (isGifOut) {
+                gifEncoder = new GIF({
+                    workers: 2,
+                    quality: 20, 
+                    width: w,
+                    height: h,
+                    workerScript: workerUrl
+                });
+                gifEncoder.on('finished', (blob) => finishProcess(blob, 'gif'));
+            } else {
+                const canvasStream = hiddenCanvas.captureStream(30);
+                videoRecorder = new MediaRecorder(canvasStream, {
                     mimeType: 'video/webm; codecs=vp9',
                     videoBitsPerSecond: bps
                 });
-                
-                const chunks = [];
-                recorder.ondataavailable = e => chunks.push(e.data);
-                recorder.onstop = () => finishProcess(new Blob(chunks, {type:'video/webm'}));
+                videoRecorder.ondataavailable = e => videoChunks.push(e.data);
+                videoRecorder.onstop = () => finishProcess(new Blob(videoChunks, {type:'video/webm'}));
+                videoRecorder.start();
+            }
 
-                recorder.start();
+            const frameCount = track.frameCount;
+            
+            for (let i = 0; i < frameCount; ++i) {
+                const result = await decoder.decode({frameIndex: i});
                 
-                let frames = 0;
-                const maxFrames = 30 * 5; // Record 5 seconds of GIF (Arbitrary limitation of this method)
-                // Note: Precise GIF loop detection is impossible with pure DOM
+                ctx.clearRect(0,0,w,h);
+                ctx.drawImage(result.image, 0, 0, w, h);
                 
-                const timer = setInterval(() => {
-                    ctx.fillRect(0,0,w,h);
-                    ctx.drawImage(imgPreview, 0, 0, w, h);
-                    frames++;
-                    const pct = ((frames / maxFrames)*100).toFixed(0);
-                    progFill.style.width = pct + '%';
-                    document.getElementById('pct-process').innerText = pct + '%';
+                if (isGifOut) {
+                    const delay = result.image.duration ? (result.image.duration / 1000) : 100;
+                    gifEncoder.addFrame(ctx, {copy: true, delay: delay});
+                } else {
+                    const duration = result.image.duration ? (result.image.duration / 1000) : 100;
+                    await new Promise(r => setTimeout(r, duration)); 
+                }
 
-                    if(frames >= maxFrames) {
-                        clearInterval(timer);
-                        recorder.stop();
-                    }
-                }, 1000/30);
+                const pct = ((i / frameCount) * 100).toFixed(0);
+                progFill.style.width = pct + '%';
+                document.getElementById('pct-process').innerText = pct + '%';
+            }
 
+            if (isGifOut) {
+                document.getElementById('pct-process').innerText = "RENDERING...";
+                gifEncoder.render();
             } else {
-                // GIF -> GIF (Using gif.js)
-                // We will capture frames from the img element
-                const gif = new GIF({
-                    workers: 2,
-                    quality: 10,
-                    width: w,
-                    height: h,
-                    workerScript: workerUrl // Use the blob url
-                });
-
-                let frames = 0;
-                const maxFrames = 30 * 3; // 3 Seconds limit for GIF encoding (it's slow)
-
-                const timer = setInterval(() => {
-                    ctx.drawImage(imgPreview, 0, 0, w, h);
-                    gif.addFrame(ctx, {copy: true, delay: 33});
-                    frames++;
-                    
-                    const pct = ((frames / maxFrames)*50).toFixed(0); // First 50% is recording
-                    progFill.style.width = pct + '%';
-                    document.getElementById('pct-process').innerText = 'Rec: ' + pct + '%';
-
-                    if(frames >= maxFrames) {
-                        clearInterval(timer);
-                        document.getElementById('pct-process').innerText = 'Rendering GIF...';
-                        gif.render();
-                    }
-                }, 1000/30);
-
-                gif.on('finished', (blob) => {
-                    progFill.style.width = '100%';
-                    finishProcess(blob, 'gif');
-                });
+                videoRecorder.stop();
             }
         }
 
@@ -552,9 +589,9 @@
             a.href = URL.createObjectURL(processedBlob);
             
             let ext = 'webm';
-            if(mediaType === 'audio') ext = 'webm'; // Browser audio recorder is usually webm container
-            if(mediaType === 'gif') ext = 'webm'; // Default convert to video
-            if(processedBlob.ext === 'gif') ext = 'gif'; // Explicit GIF output
+            if(mediaType === 'audio') ext = 'webm'; 
+            if(mediaType === 'gif') ext = 'webm'; 
+            if(processedBlob.ext === 'gif') ext = 'gif'; 
 
             a.download = `crushed_file.${ext}`;
             a.click();
