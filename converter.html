@@ -132,7 +132,8 @@
     <div class="scanlines"></div>
 
     <!-- MAIN APP -->
-    <a href="#" class="exit-btn">RETURN TO SYSTEM</a>
+    <!-- FIXED: LINKED BACK TO INDEX.HTML -->
+    <a href="index.html" class="exit-btn">RETURN TO SYSTEM</a>
 
     <div class="toolbar">
         <div class="tool-header">FORMAT SHIFTER <div class="status-dot"></div></div>
@@ -423,12 +424,6 @@
             const zStrength = parseInt(document.getElementById('rng-z-height').value);
             const scale = zStrength / 255;
 
-            let vertices = [];
-            let faces = [];
-            
-            // We use a map to keep track of vertex indices to reduce file size slightly
-            // but for simplicity in JS, we just calculate grid logic.
-            
             let output = `# TPS Format Shifter OBJ Export\n# Vertices: Approx ${Math.floor((w*h)/(step*step))}\n`;
             output += `o Mesh\n`;
 
