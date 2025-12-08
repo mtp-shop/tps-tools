@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPS STUDIOS | FORMAT SHIFTER</title>
+    <title>TPS STUDIOS | FORMAT SHIFTER v2.0</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;600&display=swap');
@@ -51,6 +51,7 @@
             border-radius: 4px; z-index: 500;
             display: flex; flex-direction: column; gap: 20px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            max-height: 90vh; overflow-y: auto;
         }
         
         .tool-header {
@@ -101,6 +102,7 @@
             cursor: pointer; transition: 0.2s; width: 100%; margin-top: 20px;
         }
         .btn-action:hover { background: var(--accent); }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Canvas Area */
         .canvas-wrapper {
@@ -121,7 +123,7 @@
         /* Dynamic Options */
         .opt-group { display: none; }
         .opt-group.active { display: block; }
-        .info-text { font-size: 0.75rem; color: #444; margin-top: 10px; line-height: 1.4; }
+        .info-text { font-size: 0.75rem; color: #444; margin-top: 10px; line-height: 1.4; border-left: 2px solid #333; padding-left: 10px; }
 
     </style>
 </head>
@@ -130,7 +132,7 @@
     <div class="scanlines"></div>
 
     <!-- MAIN APP -->
-    <a href="index.html" class="exit-btn">RETURN TO SYSTEM</a>
+    <a href="#" class="exit-btn">RETURN TO SYSTEM</a>
 
     <div class="toolbar">
         <div class="tool-header">FORMAT SHIFTER <div class="status-dot"></div></div>
@@ -149,7 +151,8 @@
                 <option value="jpeg">JPG / JPEG (Standard)</option>
                 <option value="webp">WEBP (High Efficiency)</option>
                 <option value="svg">SVG (Web Vector)</option>
-                <option value="ico">ICO (Favicon)</option>
+                <option value="ico">ICO (Windows Icon)</option>
+                <option value="obj">OBJ (3D Heightmap Mesh)</option>
             </select>
         </div>
 
@@ -158,7 +161,7 @@
         <!-- Quality Slider (JPG/WEBP) -->
         <div id="opt-quality" class="opt-group active">
             <div class="control-label" style="display:flex; justify-content:space-between;">
-                <span>Quality</span> <span id="val-qual">90%</span>
+                <span>Compression Quality</span> <span id="val-qual">90%</span>
             </div>
             <input type="range" id="rng-qual" min="0.1" max="1.0" step="0.1" value="0.9">
         </div>
@@ -179,7 +182,28 @@
                 <option value="32">32 x 32 (Standard)</option>
                 <option value="64">64 x 64 (HD)</option>
                 <option value="128">128 x 128 (Large)</option>
+                <option value="256">256 x 256 (Max)</option>
             </select>
+            <div class="info-text">
+                Generates a valid binary .ico file with a PNG-compressed container.
+            </div>
+        </div>
+
+        <!-- 3D Settings (OBJ Only) -->
+        <div id="opt-3d" class="opt-group">
+            <div class="control-label">Height Strength</div>
+            <input type="range" id="rng-z-height" min="1" max="100" step="1" value="30">
+            
+            <div class="control-label" style="margin-top:15px">Mesh Density (Step)</div>
+            <select id="sel-mesh-res">
+                <option value="1">Ultra (1:1 Pixel Match) - Slow</option>
+                <option value="2">High (1/2 Resolution)</option>
+                <option value="4" selected>Medium (1/4 Resolution)</option>
+                <option value="10">Low (Fast)</option>
+            </select>
+            <div class="info-text">
+                Brighter pixels become peaks. Darker pixels become valleys.
+            </div>
         </div>
 
         <!-- SVG Info (SVG Only) -->
@@ -189,7 +213,7 @@
              </div>
         </div>
 
-        <button class="btn-action" onclick="downloadResult()">CONVERT FILE</button>
+        <button id="btn-process" class="btn-action" onclick="processFile()">CONVERT FILE</button>
     </div>
 
     <div class="canvas-wrapper">
@@ -198,7 +222,7 @@
 
     <script>
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         let srcImg = new Image();
         let isLoaded = false;
         let bgColor = 'black'; 
@@ -208,7 +232,7 @@
             const f = e.target.files[0];
             if(!f) return;
             
-            document.getElementById('lbl-file').innerText = f.name.substring(0,20);
+            document.getElementById('lbl-file').innerText = f.name.substring(0,25);
             
             const reader = new FileReader();
             reader.onload = (ev) => {
@@ -252,6 +276,8 @@
                 document.getElementById('opt-size').classList.add('active');
             } else if (fmt === 'svg') {
                 document.getElementById('opt-svg').classList.add('active');
+            } else if (fmt === 'obj') {
+                document.getElementById('opt-3d').classList.add('active');
             }
             render();
         }
@@ -264,7 +290,7 @@
             let w = srcImg.width;
             let h = srcImg.height;
 
-            // Handle Resizing for ICO
+            // Handle Resizing for ICO (Force Square)
             if (fmt === 'ico') {
                 const s = parseInt(document.getElementById('sel-size').value);
                 w = s; h = s; 
@@ -274,8 +300,9 @@
             canvas.height = h;
 
             // Background Fill Logic
-            if (fmt === 'jpeg' || (fmt === 'ico' && bgColor !== 'transparent' && fmt !== 'ico')) {
-                // Keep bg logic for JPG primarily
+            // OBJ and SVG usually prefer raw data, but OBJ needs data to read
+            if (fmt === 'jpeg' || (fmt === 'ico' && bgColor !== 'transparent')) {
+                // JPG needs solid BG. ICO works better transparent, but if user forces it...
                 if(fmt === 'jpeg') {
                     ctx.fillStyle = bgColor;
                     ctx.fillRect(0, 0, w, h);
@@ -290,48 +317,179 @@
             ctx.drawImage(srcImg, 0, 0, w, h);
         }
 
-        // 4. Download Logic
-        function downloadResult() {
+        // 4. Processing Logic
+        async function processFile() {
             if(!isLoaded) return alert("Please select a file first.");
             
-            const fmt = document.getElementById('sel-format').value;
-            const qual = parseFloat(document.getElementById('rng-qual').value);
-            
-            // Handle SVG Separately (Text based construction)
-            if(fmt === 'svg') {
-                // Get PNG data from canvas to preserve exact pixel data + transparency
-                const imgData = canvas.toDataURL('image/png');
-                const w = canvas.width;
-                const h = canvas.height;
-                
-                // Construct simple SVG wrapper
-                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-                    <image href="${imgData}" width="${w}" height="${h}" />
-                </svg>`;
-                
-                const blob = new Blob([svgString], {type: 'image/svg+xml'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = "converted.svg";
-                a.click();
-                return;
-            }
+            const btn = document.getElementById('btn-process');
+            btn.innerText = "PROCESSING...";
+            btn.disabled = true;
 
-            // Handle Raster Formats
+            // Allow UI to update before heavy lifting
+            setTimeout(async () => {
+                const fmt = document.getElementById('sel-format').value;
+                const qual = parseFloat(document.getElementById('rng-qual').value);
+                
+                try {
+                    if(fmt === 'ico') await downloadICO();
+                    else if(fmt === 'obj') downloadOBJ();
+                    else if(fmt === 'svg') downloadSVG();
+                    else downloadRaster(fmt, qual);
+                } catch (e) {
+                    alert("Error: " + e);
+                }
+
+                btn.innerText = "CONVERT FILE";
+                btn.disabled = false;
+            }, 100);
+        }
+
+        // --- EXPORT: RASTER (JPG/WEBP) ---
+        function downloadRaster(fmt, qual) {
             let mimeType = 'image/png';
             let ext = 'png';
-
             if(fmt === 'jpeg') { mimeType = 'image/jpeg'; ext = 'jpg'; }
             if(fmt === 'webp') { mimeType = 'image/webp'; ext = 'webp'; }
-            if(fmt === 'ico')  { mimeType = 'image/png';  ext = 'ico'; } 
 
             const dataUrl = canvas.toDataURL(mimeType, qual);
+            triggerDownload(dataUrl, `converted.${ext}`);
+        }
+
+        // --- EXPORT: SVG ---
+        function downloadSVG() {
+            const imgData = canvas.toDataURL('image/png');
+            const w = canvas.width;
+            const h = canvas.height;
+            const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+                <image href="${imgData}" width="${w}" height="${h}" />
+            </svg>`;
             
-            const link = document.createElement('a');
-            link.download = `converted_file.${ext}`;
-            link.href = dataUrl;
-            link.click();
+            const blob = new Blob([svgString], {type: 'image/svg+xml'});
+            triggerDownload(URL.createObjectURL(blob), "converted.svg");
+        }
+
+        // --- EXPORT: TRUE BINARY ICO ---
+        function downloadICO() {
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        const pngData = new Uint8Array(reader.result);
+                        
+                        // 1. ICO Header (6 bytes)
+                        // Reserved (2), Type (2) [1=ico], Count (2) [1 image]
+                        const header = new Uint8Array([0, 0, 1, 0, 1, 0]);
+
+                        // 2. Directory Entry (16 bytes)
+                        const w = canvas.width > 255 ? 0 : canvas.width; // 0 means 256
+                        const h = canvas.height > 255 ? 0 : canvas.height;
+                        const size = pngData.length;
+                        const offset = 22; // 6 (header) + 16 (entry)
+
+                        const entry = new Uint8Array(16);
+                        const view = new DataView(entry.buffer);
+                        
+                        view.setUint8(0, w);          // Width
+                        view.setUint8(1, h);          // Height
+                        view.setUint8(2, 0);          // Palette count
+                        view.setUint8(3, 0);          // Reserved
+                        view.setUint16(4, 1, true);   // Color planes
+                        view.setUint16(6, 32, true);  // Bits per pixel
+                        view.setUint32(8, size, true); // Size of image data
+                        view.setUint32(12, offset, true); // Offset of image data
+
+                        // 3. Concatenate
+                        const icoFile = new Uint8Array(header.length + entry.length + pngData.length);
+                        icoFile.set(header, 0);
+                        icoFile.set(entry, header.length);
+                        icoFile.set(pngData, header.length + entry.length);
+
+                        const finalBlob = new Blob([icoFile], {type: 'image/vnd.microsoft.icon'});
+                        triggerDownload(URL.createObjectURL(finalBlob), "converted.ico");
+                        resolve();
+                    }
+                    reader.readAsArrayBuffer(blob);
+                }, 'image/png');
+            });
+        }
+
+        // --- EXPORT: 3D OBJ (HEIGHTMAP) ---
+        function downloadOBJ() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const imgData = ctx.getImageData(0, 0, w, h).data;
+            
+            const step = parseInt(document.getElementById('sel-mesh-res').value);
+            const zStrength = parseInt(document.getElementById('rng-z-height').value);
+            const scale = zStrength / 255;
+
+            let vertices = [];
+            let faces = [];
+            
+            // We use a map to keep track of vertex indices to reduce file size slightly
+            // but for simplicity in JS, we just calculate grid logic.
+            
+            let output = `# TPS Format Shifter OBJ Export\n# Vertices: Approx ${Math.floor((w*h)/(step*step))}\n`;
+            output += `o Mesh\n`;
+
+            // Generate Vertices
+            // We iterate y then x
+            let vertCount = 0;
+            
+            // Pre-calculate vertices grid to handle skipping
+            // rows[y][x] = vertexIndex
+            let grid = {}; 
+
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
+                    const i = (y * w + x) * 4;
+                    // Grayscale brightness = (r+g+b)/3
+                    const brightness = (imgData[i] + imgData[i+1] + imgData[i+2]) / 3;
+                    const z = brightness * scale;
+                    
+                    // Invert Y for 3D space usually, but keeping it simple
+                    // Format: v x y z
+                    output += `v ${x} ${z} ${y}\n`;
+                    vertCount++;
+                    
+                    if(!grid[y]) grid[y] = {};
+                    grid[y][x] = vertCount;
+                }
+            }
+
+            output += "\n# Faces\n";
+
+            // Generate Faces
+            for (let y = 0; y < h - step; y += step) {
+                for (let x = 0; x < w - step; x += step) {
+                    // Get indices of the quad
+                    // p1--p2
+                    // |    |
+                    // p3--p4
+                    
+                    const p1 = grid[y][x];
+                    const p2 = grid[y][x+step];
+                    const p3 = grid[y+step][x+step];
+                    const p4 = grid[y+step][x];
+
+                    if (p1 && p2 && p3 && p4) {
+                        output += `f ${p1} ${p4} ${p2}\n`;
+                        output += `f ${p4} ${p3} ${p2}\n`;
+                    }
+                }
+            }
+
+            const blob = new Blob([output], {type: 'text/plain'});
+            triggerDownload(URL.createObjectURL(blob), "heightmap_mesh.obj");
+        }
+
+        function triggerDownload(url, name) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
     </script>
 </body>
