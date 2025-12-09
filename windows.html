@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPS TEMPLE | SOFTWARE HUB</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
+
+        :root {
+            --bg: #030303;
+            --sidebar: #080808;
+            --card: rgba(15, 15, 15, 0.8);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #ffd700;
+            --accent-glow: rgba(255, 215, 0, 0.2);
+            --text: #e0e0e0;
+            --danger: #ff3333;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; user-select: none; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            background-image: 
+                linear-gradient(to bottom, transparent 95%, rgba(255,215,0,0.03) 100%),
+                radial-gradient(circle at 10% 10%, rgba(20, 20, 20, 1), #000);
+        }
+
+        /* --- LAYOUT --- */
+        .sidebar {
+            width: 280px; background: rgba(5, 5, 5, 0.98);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 30px;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 2rem; font-weight: 800; letter-spacing: 3px;
+            margin-bottom: 40px; color: white; text-shadow: 0 0 20px var(--accent-glow);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .brand span { color: var(--accent); }
+
+        .nav-group { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; padding-right: 5px; }
+        
+        .nav-item {
+            padding: 14px 20px; color: #666; background: transparent;
+            border: none; text-align: left;
+            font-family: 'Rajdhani'; font-weight: 700; font-size: 0.9rem;
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center;
+            gap: 15px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;
+            position: relative; overflow: hidden;
+        }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); }
+        
+        .nav-item.active { 
+            background: linear-gradient(90deg, var(--accent-glow) 0%, transparent 100%);
+            color: var(--accent); 
+        }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: var(--accent); box-shadow: 0 0 10px var(--accent);
+        }
+        
+        .nav-item i { width: 20px; text-align: center; }
+
+        /* --- CONTENT AREA --- */
+        .content-wrapper { flex: 1; display: flex; flex-direction: column; position: relative; }
+
+        .top-header {
+            padding: 15px 40px; display: flex; justify-content: flex-end;
+            border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.5);
+            backdrop-filter: blur(5px);
+        }
+        .return-btn {
+            text-decoration: none; color: #888; font-weight: 700; font-size: 0.75rem;
+            border: 1px solid #333; padding: 8px 20px; transition: 0.2s; background: black;
+            letter-spacing: 1px;
+        }
+        .return-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+
+        .content { flex: 1; padding: 40px; overflow-y: auto; }
+
+        .section-title {
+            font-size: 2.5rem; font-weight: 800; margin-bottom: 30px; color: white;
+            border-bottom: 1px solid var(--border); padding-bottom: 15px;
+            display: flex; align-items: center; gap: 15px; letter-spacing: 2px;
+        }
+        .section-title i { color: var(--accent); filter: drop-shadow(0 0 10px var(--accent-glow)); }
+
+        .grid { display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .grid.active { display: grid; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CARDS */
+        .card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            padding: 25px; display: flex; flex-direction: column; gap: 10px;
+            transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 10px 40px rgba(0,0,0,0.7); }
+
+        .card-head { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
+        .card-icon { font-size: 1.8rem; color: var(--accent); }
+        .card-name { font-size: 1.2rem; font-weight: 800; color: white; letter-spacing: 1px; }
+        .card-desc { font-family: 'Inter'; font-size: 0.8rem; color: #888; line-height: 1.5; flex: 1; }
+
+        /* BUTTONS */
+        .btn-dl {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            width: 100%; padding: 12px; background: #0a0a0a; border: 1px solid #333;
+            color: white; font-family: 'Rajdhani'; font-weight: 700; text-decoration: none;
+            font-size: 0.85rem; cursor: pointer; transition: 0.2s; margin-top: 15px;
+            letter-spacing: 1px;
+        }
+        .btn-dl:hover { background: var(--accent); color: black; border-color: var(--accent); }
+
+        .btn-locked { border-color: var(--danger); color: var(--danger); }
+        .btn-locked:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+        .cmd-box {
+            background: #000; border: 1px solid #333; padding: 12px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #00ff9d;
+            word-break: break-all; cursor: pointer; position: relative; border-radius: 4px; margin-top: 15px;
+        }
+        .cmd-box:hover { border-color: var(--accent); }
+        .cmd-box::after {
+            content: 'COPY'; position: absolute; right: 0; top: 0;
+            background: #222; color: #fff; padding: 2px 6px; font-size: 0.6rem;
+        }
+
+        .tags { display: flex; gap: 5px; margin-top: 5px; }
+        .tag { 
+            font-size: 0.6rem; padding: 3px 8px; border-radius: 2px; 
+            background: rgba(255,255,255,0.05); color: #888; font-weight: 600; font-family: 'Inter'; 
+        }
+
+        /* --- AUTH OVERLAY --- */
+        .auth-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .auth-box {
+            background: #0a0a0a; border: 1px solid var(--accent); padding: 40px;
+            text-align: center; width: 400px; box-shadow: 0 0 50px var(--accent-glow);
+        }
+        .auth-title { font-size: 1.5rem; font-weight: 800; color: var(--accent); margin-bottom: 20px; letter-spacing: 3px; }
+        .auth-input {
+            background: black; border: 1px solid #333; color: white; padding: 15px;
+            width: 100%; font-family: 'Rajdhani'; font-size: 1.5rem; text-align: center; letter-spacing: 5px;
+            margin-bottom: 20px; outline: none;
+        }
+        .auth-input:focus { border-color: var(--accent); }
+        .auth-btn {
+            background: var(--accent); color: black; border: none; width: 100%; padding: 15px;
+            font-family: 'Rajdhani'; font-weight: 800; font-size: 1rem; cursor: pointer;
+        }
+        .auth-btn:hover { background: white; }
+        .auth-error { color: var(--danger); font-size: 0.8rem; margin-top: 10px; display: none; }
+
+        /* --- GUIDE MODAL --- */
+        .guide-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .guide-box {
+            background: #111; border: 1px solid var(--border); width: 600px; max-width: 90%;
+            padding: 30px; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .guide-header { font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between;}
+        .guide-content { font-family: 'Inter'; color: #ccc; font-size: 0.9rem; line-height: 1.6; }
+        .guide-content strong { color: white; }
+        .guide-code { 
+            background: black; border: 1px solid #333; padding: 15px; margin: 15px 0; 
+            font-family: 'JetBrains Mono'; color: #00ff9d; font-size: 0.85rem; cursor: pointer;
+            position: relative; transition: 0.2s;
+        }
+        .guide-code:hover { border-color: var(--accent); }
+        .guide-code:active { transform: scale(0.98); }
+        
+        .close-guide { background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem; }
+        .close-guide:hover { color: white; }
+
+        /* --- INTERNAL BROWSER OVERLAY --- */
+        .browser-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 9999; display: none; flex-direction: column;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .browser-bar {
+            height: 50px; background: #111; border-bottom: 1px solid var(--accent);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+        }
+        .browser-title { font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; }
+        .browser-url { 
+            font-family: 'Inter'; font-size: 0.8rem; color: #666; background: #050505; 
+            padding: 5px 15px; border-radius: 20px; border: 1px solid #333; margin-left: 20px;
+        }
+        
+        .browser-controls { display: flex; gap: 10px; }
+        .control-btn {
+            background: #222; border: 1px solid #444; color: white; font-family: 'Rajdhani'; font-weight: 700;
+            padding: 0 15px; height: 30px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 4px; transition: 0.2s; font-size: 0.7rem; gap: 5px;
+        }
+        .control-btn:hover { background: var(--accent); color: black; }
+        .control-btn.close { background: #aa0000; border-color: #ff0000; width: 30px; padding: 0; }
+        .control-btn.close:hover { background: #ff0000; color: white; }
+
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+        .iframe-loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--accent); font-family: 'Rajdhani'; font-size: 1.5rem; display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <div class="sidebar">
+        <!-- Replaced Cube Icon with Logo -->
+        <div class="brand"><img src="logo.png" alt="TPS" style="height:50px;"> TPS <span>TEMPLE</span></div>
+        
+        <div class="nav-group">
+            <button class="nav-item active" onclick="showTab('os')"><i class="fa-brands fa-windows"></i> OS / ISOs</button>
+            <button class="nav-item" onclick="showTab('activation')"><i class="fa-solid fa-key"></i> ACTIVATION</button>
+            <button class="nav-item" onclick="showTab('browsers')"><i class="fa-brands fa-chrome"></i> BROWSERS</button>
+            <button class="nav-item" onclick="showTab('extensions')"><i class="fa-solid fa-puzzle-piece"></i> EXTENSIONS</button>
+            <button class="nav-item" onclick="showTab('dev')"><i class="fa-solid fa-code"></i> DEVELOPMENT</button>
+            <button class="nav-item" onclick="showTab('creative')"><i class="fa-solid fa-pen-nib"></i> CREATIVE SUITE</button>
+            <button class="nav-item" onclick="showTab('gaming')"><i class="fa-solid fa-gamepad"></i> GAMING & EMU</button>
+            <button class="nav-item" onclick="showTab('privacy')"><i class="fa-solid fa-user-shield"></i> PRIVACY & SECURITY</button>
+            <button class="nav-item" onclick="showTab('tools')"><i class="fa-solid fa-toolbox"></i> TOOLS & UTILS</button>
+            <button class="nav-item" onclick="showTab('media')"><i class="fa-solid fa-play"></i> MEDIA</button>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="top-header"><a href="index.html" class="return-btn">RETURN TO SYSTEM</a></div>
+
+        <div class="content">
+            <!-- OS SECTION -->
+            <div id="os" class="grid active">
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-compact-disc card-icon"></i><div class="card-name">Windows 10 LTSC</div></div>
+                    <div class="card-desc">The Enterprise standard. No bloatware. Supported until 2032.</div>
+                    <div class="tags"><span class="tag">STABLE</span></div>
+                    <button onclick="openLink('https://massgrave.dev/genuine-installation-media', 'int')" class="btn-dl">OPEN MASSGRAVE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-ghost card-icon"></i><div class="card-name">Ghost Spectre 11</div></div>
+                    <div class="card-desc">Superlite modded Windows 11. Stripped telemetry, optimized for gaming.</div>
+                    <button onclick="openLink('https://ghostspectre.com/', 'ext')" class="btn-dl">OPEN GHOST SITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-microchip card-icon"></i><div class="card-name">ReviOS</div></div>
+                    <div class="card-desc">A capable, efficient, but safe playback of Windows.</div>
+                    <button onclick="openLink('https://revi.cc/', 'ext')" class="btn-dl">OPEN REVI <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-globe card-icon"></i><div class="card-name">AtlasOS</div></div>
+                    <div class="card-desc">Open source playbook to transform Windows into a gaming beast.</div>
+                    <button onclick="openLink('https://atlasos.net/', 'int')" class="btn-dl">OPEN ATLAS</button>
+                </div>
+            </div>
+
+            <!-- ACTIVATION -->
+            <div id="activation" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-key"></i> ACTIVATION</div>
+                
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-windows card-icon"></i><div class="card-name">Windows Activation</div></div>
+                    <div class="card-desc">Comprehensive guide to activating Windows 8.1, 10, and 11 permanently.</div>
+                    <div class="tags"><span class="tag" style="color:var(--danger)">LOCKED</span></div>
+                    <button onclick="unlockGuide()" class="btn-dl btn-locked"><i class="fa-solid fa-lock"></i> ACCESS GUIDE</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-microsoft card-icon"></i><div class="card-name">Office Tool Plus</div></div>
+                    <div class="card-desc">Advanced deployment tool for Office 365/2021.</div>
+                    <button onclick="openLink('https://otp.landian.vip/en-us/', 'int')" class="btn-dl">OPEN TOOL PLUS</button>
+                </div>
+            </div>
+
+            <!-- DEVELOPMENT (NEW) -->
+            <div id="dev" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-code"></i> DEVELOPMENT</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-code card-icon"></i><div class="card-name">VS Code</div></div>
+                    <div class="card-desc">The industry standard code editor. Lightweight and extensible.</div>
+                    <button onclick="openLink('https://code.visualstudio.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-python card-icon"></i><div class="card-name">Python</div></div>
+                    <div class="card-desc">Powerful programming language. Essential for running scripts.</div>
+                    <!-- FIXED: External -->
+                    <button onclick="openLink('https://www.python.org/downloads/', 'ext')" class="btn-dl">DOWNLOAD <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-git-alt card-icon"></i><div class="card-name">Git</div></div>
+                    <div class="card-desc">Version control system. Required for cloning repositories.</div>
+                    <button onclick="openLink('https://git-scm.com/downloads', 'int')" class="btn-dl">DOWNLOAD</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-node card-icon"></i><div class="card-name">Node.js</div></div>
+                    <div class="card-desc">JavaScript runtime built on Chrome's V8 engine.</div>
+                    <button onclick="openLink('https://nodejs.org/en', 'int')" class="btn-dl">DOWNLOAD</button>
+                </div>
+            </div>
+
+            <!-- BROWSERS -->
+            <div id="browsers" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-brands fa-chrome"></i> BROWSERS</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-bolt card-icon"></i><div class="card-name">Thorium</div></div>
+                    <div class="card-desc">The fastest browser on earth. AVX2 Optimized Chromium.</div>
+                    <button onclick="openLink('https://thorium.rocks/', 'int')" class="btn-dl">OPEN THORIUM</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-firefox card-icon"></i><div class="card-name">Librewolf</div></div>
+                    <div class="card-desc">Hardened fork of Firefox. No telemetry, strict privacy.</div>
+                    <button onclick="openLink('https://librewolf.net/', 'int')" class="btn-dl">OPEN LIBREWOLF</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-brave card-icon"></i><div class="card-name">Brave</div></div>
+                    <div class="card-desc">Chromium with built-in ad/tracker blocking.</div>
+                    <button onclick="openLink('https://brave.com/', 'ext')" class="btn-dl">OPEN BRAVE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-mask card-icon"></i><div class="card-name">Ungoogled Chromium</div></div>
+                    <div class="card-desc">Pure Chromium experience. Google services removed.</div>
+                    <button onclick="openLink('https://github.com/ungoogled-software/ungoogled-chromium', 'ext')" class="btn-dl">OPEN GITHUB <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+            </div>
+
+            <!-- EXTENSIONS -->
+            <div id="extensions" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-puzzle-piece"></i> EXTENSIONS</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-shield-halved card-icon"></i><div class="card-name">uBlock Origin</div></div>
+                    <div class="card-desc">The most efficient wide-spectrum content blocker. Low CPU usage.</div>
+                    <button onclick="openLink('https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm', 'ext')" class="btn-dl">CHROME STORE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-music card-icon"></i><div class="card-name">AHA Music</div></div>
+                    <div class="card-desc">Identify songs playing in your browser.</div>
+                    <button onclick="openLink('https://chromewebstore.google.com/detail/aha-music-song-finder-for/dpacanjfikmhoddligfbehkpomnbgblf', 'ext')" class="btn-dl">CHROME STORE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-moon card-icon"></i><div class="card-name">Dark Reader</div></div>
+                    <div class="card-desc">Force dark mode on every website. Take care of your eyes.</div>
+                    <button onclick="openLink('https://darkreader.org/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-volume-high card-icon"></i><div class="card-name">Volume Master</div></div>
+                    <div class="card-desc">Boost volume up to 600% per tab. Great for quiet videos.</div>
+                    <button onclick="openLink('https://chromewebstore.google.com/detail/volume-master/jghecgabfgfdldnmbfkhmffcabddioke', 'ext')" class="btn-dl">CHROME STORE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-tag card-icon"></i><div class="card-name">Honey</div></div>
+                    <div class="card-desc">Automatically find and apply coupon codes at checkout.</div>
+                    <button onclick="openLink('https://www.joinhoney.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-globe card-icon"></i><div class="card-name">Urban VPN</div></div>
+                    <div class="card-desc">100% Free VPN Proxy extension. Unblock restricted content.</div>
+                    <button onclick="openLink('https://www.urban-vpn.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-youtube card-icon"></i><div class="card-name">SponsorBlock</div></div>
+                    <div class="card-desc">Skip sponsorships, intros, and filler in YouTube videos.</div>
+                    <button onclick="openLink('https://sponsor.ajay.app/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-thumbs-down card-icon"></i><div class="card-name">Return YT Dislike</div></div>
+                    <div class="card-desc">Brings back the dislike counter on YouTube videos.</div>
+                    <button onclick="openLink('https://returnyoutubedislike.com/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-code-branch card-icon"></i><div class="card-name">Tampermonkey</div></div>
+                    <div class="card-desc">The world's most popular userscript manager. Modify websites.</div>
+                    <button onclick="openLink('https://www.tampermonkey.net/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-newspaper card-icon"></i><div class="card-name">Bypass Paywalls</div></div>
+                    <div class="card-desc">Clean, bypass paywalls extension for Chrome/Firefox.</div>
+                    <button onclick="openLink('https://github.com/iamadamdev/bypass-paywalls-chrome', 'ext')" class="btn-dl">OPEN GITHUB <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+            </div>
+
+            <!-- CREATIVE SUITE -->
+            <div id="creative" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-pen-nib"></i> CREATIVE SUITE</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-photo-film card-icon"></i><div class="card-name">Photopea</div></div>
+                    <div class="card-desc">Advanced image editor. Basically Photoshop in your browser.</div>
+                    <button onclick="openLink('https://www.photopea.com/', 'int')" class="btn-dl">OPEN APP</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-figma card-icon"></i><div class="card-name">Figma</div></div>
+                    <div class="card-desc">Collaborative interface design tool.</div>
+                    <button onclick="openLink('https://www.figma.com/', 'ext')" class="btn-dl">OPEN FIGMA <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-cube card-icon"></i><div class="card-name">Blender</div></div>
+                    <div class="card-desc">Free and open source 3D creation suite.</div>
+                    <!-- FIXED: External -->
+                    <button onclick="openLink('https://www.blender.org/', 'ext')" class="btn-dl">OPEN BLENDER <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+            </div>
+
+            <!-- GAMING & EMULATION -->
+            <div id="gaming" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-gamepad"></i> GAMING & EMULATION</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-steam card-icon"></i><div class="card-name">Steam</div></div>
+                    <div class="card-desc">The ultimate destination for playing, discussing, and creating games.</div>
+                    <button onclick="openLink('https://store.steampowered.com/about/', 'ext')" class="btn-dl">OPEN STEAM <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-ghost card-icon"></i><div class="card-name">RetroArch</div></div>
+                    <div class="card-desc">Frontend for emulators, game engines and media players.</div>
+                    <button onclick="openLink('https://www.retroarch.com/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-skull card-icon"></i><div class="card-name">Cheat Engine</div></div>
+                    <div class="card-desc">Memory scanner/debugger for game modification.</div>
+                    <button onclick="openLink('https://www.cheatengine.org/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+            </div>
+
+            <!-- PRIVACY & SECURITY -->
+            <div id="privacy" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-user-shield"></i> PRIVACY & SECURITY</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-shield-virus card-icon"></i><div class="card-name">Malwarebytes</div></div>
+                    <div class="card-desc">The industry standard for finding malware that antivirus misses.</div>
+                    <button onclick="openLink('https://www.malwarebytes.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-lock card-icon"></i><div class="card-name">Bitwarden</div></div>
+                    <div class="card-desc">Secure, open source password manager.</div>
+                    <!-- FIXED: External -->
+                    <button onclick="openLink('https://bitwarden.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-shield-cat card-icon"></i><div class="card-name">Veracrypt</div></div>
+                    <div class="card-desc">Free open-source disk encryption software for Windows.</div>
+                    <button onclick="openLink('https://www.veracrypt.fr/en/Downloads.html', 'int')" class="btn-dl">DOWNLOAD</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-toolbox card-icon"></i><div class="card-name">Chris Titus WinUtil</div></div>
+                    <div class="card-desc">The ultimate AIO tool. Installs software, disables telemetry.</div>
+                    <div class="cmd-box" onclick="copyCmd(this)">irm christitus.com/win | iex</div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-ban card-icon"></i><div class="card-name">O&O ShutUp10++</div></div>
+                    <div class="card-desc">Free antispy tool. Full control over Windows privacy.</div>
+                    <button onclick="openLink('https://www.oo-software.com/en/shutup10', 'int')" class="btn-dl">OPEN O&O</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-eraser card-icon"></i><div class="card-name">DDU</div></div>
+                    <div class="card-desc">Display Driver Uninstaller. Completely nukes GPU drivers.</div>
+                    <button onclick="openLink('https://www.guru3d.com/files-details/display-driver-uninstaller-download.html', 'ext')" class="btn-dl">OPEN GURU3D <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+            </div>
+
+            <!-- TOOLS -->
+            <div id="tools" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-toolbox"></i> TOOLS & UTILITIES</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-file-zipper card-icon"></i><div class="card-name">7-Zip (NanaZip)</div></div>
+                    <div class="card-desc">Modern fork of 7-Zip for Windows 11.</div>
+                    <button onclick="openLink('https://github.com/M2Team/NanaZip', 'ext')" class="btn-dl">OPEN GITHUB <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-hard-drive card-icon"></i><div class="card-name">Rufus</div></div>
+                    <div class="card-desc">Create bootable USB drives the easy way. Flash OS ISOs.</div>
+                    <button onclick="openLink('https://rufus.ie/en/', 'int')" class="btn-dl">OPEN RUFUS</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-video card-icon"></i><div class="card-name">OBS Studio</div></div>
+                    <div class="card-desc">Free and open source software for video recording and live streaming.</div>
+                    <button onclick="openLink('https://obsproject.com/', 'ext')" class="btn-dl">OPEN OBS <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-code card-icon"></i><div class="card-name">Notepad++</div></div>
+                    <div class="card-desc">A free source code editor and Notepad replacement.</div>
+                    <button onclick="openLink('https://notepad-plus-plus.org/', 'int')" class="btn-dl">OPEN NOTEPAD++</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-discord card-icon"></i><div class="card-name">Vencord</div></div>
+                    <div class="card-desc">The best Discord client mod. Plugins and themes.</div>
+                    <button onclick="openLink('https://vencord.dev/', 'int')" class="btn-dl">OPEN VENCORD</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-hard-drive card-icon"></i><div class="card-name">WizTree</div></div>
+                    <div class="card-desc">World's fastest disk space analyzer.</div>
+                    <button onclick="openLink('https://diskanalyzer.com/', 'int')" class="btn-dl">OPEN WIZTREE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-broom card-icon"></i><div class="card-name">BleachBit</div></div>
+                    <div class="card-desc">Open source system cleaner. Better than CCleaner.</div>
+                    <button onclick="openLink('https://www.bleachbit.org/', 'ext')" class="btn-dl">OPEN BLEACHBIT <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-camera card-icon"></i><div class="card-name">ShareX</div></div>
+                    <div class="card-desc">Ultimate screen capture tool with OCR and GIF recording.</div>
+                    <button onclick="openLink('https://getsharex.com/', 'int')" class="btn-dl">OPEN SHAREX</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-magnet card-icon"></i><div class="card-name">qBittorrent</div></div>
+                    <div class="card-desc">The only torrent client you should use. No ads.</div>
+                    <button onclick="openLink('https://www.qbittorrent.org/', 'ext')" class="btn-dl">OPEN QBIT <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-download card-icon"></i><div class="card-name">IDM + Activator</div></div>
+                    <div class="card-desc">Internet Download Manager. Increases download speeds by 5x.</div>
+                    <div class="cmd-box" onclick="copyCmd(this)">irm https://massgrave.dev/ias | iex</div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-magnifying-glass card-icon"></i><div class="card-name">Flow Launcher</div></div>
+                    <div class="card-desc">Quick file search & app launcher for Windows.</div>
+                    <button onclick="openLink('https://www.flowlauncher.com/', 'int')" class="btn-dl">OPEN WEBSITE</button>
+                </div>
+            </div>
+
+            <!-- MEDIA -->
+            <div id="media" class="grid">
+                <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-play"></i> MEDIA</div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-video card-icon"></i><div class="card-name">MPV</div></div>
+                    <div class="card-desc">Powerful minimalist media player. Plays everything.</div>
+                    <button onclick="openLink('https://mpv.io/', 'int')" class="btn-dl">OPEN MPV</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-file-audio card-icon"></i><div class="card-name">Audacity</div></div>
+                    <div class="card-desc">Free, open source, cross-platform audio software.</div>
+                    <button onclick="openLink('https://www.audacityteam.org/', 'int')" class="btn-dl">OPEN AUDACITY</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-film card-icon"></i><div class="card-name">HandBrake</div></div>
+                    <div class="card-desc">The open source video transcoder.</div>
+                    <!-- FIXED: External -->
+                    <button onclick="openLink('https://handbrake.fr/', 'ext')" class="btn-dl">OPEN HANDBRAKE <i class="fa-solid fa-up-right-from-square"></i></button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-brands fa-spotify card-icon"></i><div class="card-name">Spicetify</div></div>
+                    <div class="card-desc">Customize Spotify with themes and ad-blocking.</div>
+                    <button onclick="openLink('https://spicetify.app/', 'int')" class="btn-dl">OPEN GUIDE</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><i class="fa-solid fa-film card-icon"></i><div class="card-name">Stremio</div></div>
+                    <div class="card-desc">Modern media center + Torrentio addon.</div>
+                    <button onclick="openLink('https://www.stremio.com/', 'int')" class="btn-dl">OPEN STREMIO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH OVERLAY -->
+    <div class="auth-overlay" id="auth-screen">
+        <div class="auth-box">
+            <div class="auth-title"><i class="fa-solid fa-lock"></i> RESTRICTED ACCESS</div>
+            <input type="password" id="auth-inp" class="auth-input" maxlength="4" placeholder="____">
+            <button class="auth-btn" onclick="checkAuth()">AUTHENTICATE</button>
+            <div class="auth-error" id="auth-err">ACCESS DENIED. INVALID CREDENTIALS.</div>
+            <button onclick="document.getElementById('auth-screen').style.display='none'" style="margin-top:10px; background:none; border:none; color:#666; cursor:pointer;">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- GUIDE MODAL -->
+    <div class="guide-modal" id="guide-screen">
+        <div class="guide-box">
+            <div class="guide-header">
+                <span><i class="fa-brands fa-windows"></i> WINDOWS ACTIVATION</span>
+                <button class="close-guide" onclick="document.getElementById('guide-screen').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="guide-content">
+                For Windows 8.1/10/11:
+                <br><br>
+                1. Right-click the Windows start menu and select <strong>PowerShell</strong> or <strong>Terminal</strong> (not CMD).
+                <br>
+                2. Copy and paste the following code and press <strong>Enter</strong>:
+                <div class="guide-code" onclick="copyGuideCode(this)">irm https://massgrave.dev/get | iex</div>
+                3. You’ll see activation options. Follow the on-screen instructions to complete the process.
+            </div>
+        </div>
+    </div>
+
+    <!-- INTERNAL BROWSER OVERLAY -->
+    <div class="browser-overlay" id="browser">
+        <div class="iframe-loader" id="loader">LOADING...</div>
+        <div class="browser-bar">
+            <div class="browser-title">
+                <span style="color:var(--accent)">TPS</span> BROWSER
+                <span class="browser-url" id="url-display">...</span>
+            </div>
+            <div class="browser-controls">
+                <button class="control-btn" onclick="forceExternal()">OPEN EXTERNAL <i class="fa-solid fa-up-right-from-square"></i></button>
+                <div class="control-btn close" onclick="closeInternal()"><i class="fa-solid fa-xmark"></i></div>
+            </div>
+        </div>
+        <iframe id="internal-frame" onload="document.getElementById('loader').style.display='none'"></iframe>
+    </div>
+
+    <script>
+        // --- NAVIGATION ---
+        function showTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.querySelectorAll('.grid').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- PASSWORD SYSTEM ---
+        let isUnlocked = false;
+
+        function unlockGuide() {
+            if(isUnlocked) {
+                document.getElementById('guide-screen').style.display = 'flex';
+            } else {
+                document.getElementById('auth-screen').style.display = 'flex';
+                document.getElementById('auth-inp').focus();
+            }
+        }
+
+        function checkAuth() {
+            const inp = document.getElementById('auth-inp');
+            if(inp.value === '1956') {
+                isUnlocked = true;
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('guide-screen').style.display = 'flex';
+            } else {
+                document.getElementById('auth-err').style.display = 'block';
+                inp.value = '';
+            }
+        }
+
+        // --- COPY FUNCTIONS ---
+        function copyCmd(el) {
+            const text = el.innerText;
+            navigator.clipboard.writeText(text);
+            const original = el.innerText;
+            el.innerText = "COPIED";
+            setTimeout(() => el.innerText = original, 1000);
+        }
+
+        function copyGuideCode(el) {
+            const text = el.innerText;
+            navigator.clipboard.writeText(text);
+            const originalText = el.innerText;
+            el.innerText = "COPIED";
+            el.style.color = "white";
+            setTimeout(() => {
+                el.innerText = text;
+                el.style.color = "#00ff9d";
+            }, 1000);
+        }
+
+        // --- HYBRID BROWSER ---
+        let currentUrl = '';
+
+        function openLink(url, type) {
+            if (type === 'ext') openApp(url);
+            else openInternal(url);
+        }
+
+        function openInternal(url) {
+            currentUrl = url;
+            const browser = document.getElementById('browser');
+            const frame = document.getElementById('internal-frame');
+            document.getElementById('url-display').innerText = url;
+            document.getElementById('loader').style.display = 'block';
+            frame.src = url;
+            browser.style.display = 'flex';
+        }
+
+        function closeInternal() {
+            document.getElementById('browser').style.display = 'none';
+            document.getElementById('internal-frame').src = ''; 
+        }
+
+        function forceExternal() {
+            if(currentUrl) openApp(currentUrl);
+        }
+
+        function openApp(url) {
+            const w = 1200, h = 800;
+            const l = (screen.width - w) / 2;
+            const t = (screen.height - h) / 2;
+            window.open(url, 'TPS_App', `width=${w},height=${h},top=${t},left=${l},toolbar=no,status=no,menubar=no,scrollbars=yes,resizable=yes`);
+        }
+    </script>
+</body>
+</html>
