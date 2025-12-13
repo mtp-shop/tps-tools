@@ -290,7 +290,7 @@
                 </div>
             </div>
 
-            <!-- DEVELOPMENT (NEW) -->
+            <!-- DEVELOPMENT -->
             <div id="dev" class="grid">
                 <div class="section-title" style="grid-column: 1/-1;"><i class="fa-solid fa-code"></i> DEVELOPMENT</div>
                 <div class="card">
@@ -301,7 +301,6 @@
                 <div class="card">
                     <div class="card-head"><i class="fa-brands fa-python card-icon"></i><div class="card-name">Python</div></div>
                     <div class="card-desc">Powerful programming language. Essential for running scripts.</div>
-                    <!-- FIXED: External -->
                     <button onclick="openLink('https://www.python.org/downloads/', 'ext')" class="btn-dl">DOWNLOAD <i class="fa-solid fa-up-right-from-square"></i></button>
                 </div>
                 <div class="card">
@@ -412,7 +411,6 @@
                 <div class="card">
                     <div class="card-head"><i class="fa-solid fa-cube card-icon"></i><div class="card-name">Blender</div></div>
                     <div class="card-desc">Free and open source 3D creation suite.</div>
-                    <!-- FIXED: External -->
                     <button onclick="openLink('https://www.blender.org/', 'ext')" class="btn-dl">OPEN BLENDER <i class="fa-solid fa-up-right-from-square"></i></button>
                 </div>
             </div>
@@ -448,7 +446,6 @@
                 <div class="card">
                     <div class="card-head"><i class="fa-solid fa-lock card-icon"></i><div class="card-name">Bitwarden</div></div>
                     <div class="card-desc">Secure, open source password manager.</div>
-                    <!-- FIXED: External -->
                     <button onclick="openLink('https://bitwarden.com/', 'ext')" class="btn-dl">OPEN WEBSITE <i class="fa-solid fa-up-right-from-square"></i></button>
                 </div>
                 <div class="card">
@@ -549,7 +546,6 @@
                 <div class="card">
                     <div class="card-head"><i class="fa-solid fa-film card-icon"></i><div class="card-name">HandBrake</div></div>
                     <div class="card-desc">The open source video transcoder.</div>
-                    <!-- FIXED: External -->
                     <button onclick="openLink('https://handbrake.fr/', 'ext')" class="btn-dl">OPEN HANDBRAKE <i class="fa-solid fa-up-right-from-square"></i></button>
                 </div>
                 <div class="card">
@@ -577,7 +573,7 @@
         </div>
     </div>
 
-    <!-- GUIDE MODAL -->
+    <!-- GUIDE MODAL (UPDATED WITH CLICKABLE LINK) -->
     <div class="guide-modal" id="guide-screen">
         <div class="guide-box">
             <div class="guide-header">
@@ -585,13 +581,11 @@
                 <button class="close-guide" onclick="document.getElementById('guide-screen').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="guide-content">
-                For Windows 8.1/10/11:
-                <br><br>
-                1. Right-click the Windows start menu and select <strong>PowerShell</strong> or <strong>Terminal</strong> (not CMD).
-                <br>
-                2. Copy and paste the following code and press <strong>Enter</strong>:
-                <div class="guide-code" onclick="copyGuideCode(this)">irm https://massgrave.dev/get | iex</div>
-                3. You’ll see activation options. Follow the on-screen instructions to complete the process.
+                <div style="text-align: center; padding: 20px 0;">
+                    <a href="https://massgrave.dev/" target="_blank" class="btn-dl" style="background: var(--accent); color: black; border-color: var(--accent); justify-content: center; font-size: 1rem;">
+                        OPEN MASSGRAVE.DEV <i class="fa-solid fa-up-right-from-square"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
